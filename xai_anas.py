@@ -342,8 +342,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
             test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
             class_names = np.unique(diz['y_train'])
-            print('class names', class_names)
-            ##################  SETTING XAI EXPLAINERS - 1 FOR BEACH ##############################
+            #print('class names', class_names)
+
+            ##################  SETTING XAI EXPLAINERS  ##############################
             #predict_for_anchors = lambda x: diz['model'].predict(x)  # COMMON PREDICTION FUNCTION (TO CHECK)
 
             explainer_shap = shap.KernelExplainer(diz['model'].predict, shap.sample(train_set,nsamples=80, random_state=0))
@@ -363,9 +364,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                      discretizer='quartile')
 
             pred = diz['probs_student']
-            print('ST pred',pred)
-            #predict_proba = diz['model'].predict(diz['X_test'][0].reshape(1, -1))[0]  # default: l2 penalty = ridge regression
-            #print('ST ANAS REGRESSION: is pred (diz[probs_student]) == model predict (diz[model].predic) ?', pred == predict_proba)
+            #print('ST pred',pred)
+
 
             #############################  SHAP  ##############################
             '''
@@ -378,14 +378,15 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
             start_time_s = time.time()
             shap_values = explainer_shap.shap_values(test_set)  # test set è una riga
-            #print('%s - ST - SHAP' % filename)
-            print(f"- ST - SHAP Total time {filename}: {(time.time() - start_time_s) / 60} minutes")
-            print('\n ST ANAS shap_values', shap_values)
-            expected_values = explainer_shap.expected_value
-            print('\n ST ANAS expected_values', expected_values)
+            #print(f"- ST - SHAP Total time {filename}: {(time.time() - start_time_s) / 60} minutes")
+            st_time_shap1 = f"- ST - SHAP Total time {filename}: {(time.time() - start_time_s) / 60} minutes"
+            with open('other_files/' + f"ST - SHAP - Total time", 'w', encoding='utf-8') as t9:
+                json.dump(st_time_shap1, t9, cls=NumpyEncoder)
+
+
             zipped = list(zip(shap_values[0], all_cols))
             ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
-            print('\n ordered_shap_list', ordered_shap_list)
+
             # Get the force plot for each row
             shap.initjs()
             shap.plots.force(explainer_shap.expected_value, shap_values, test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)
@@ -397,7 +398,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
             model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)
-            print('ST anas model output', model_output)
+            #print('ST anas model output', model_output)
 
             dizio = {'batch %s' % k: {'row %s' % k: {
                 'shap_values': shap_values,
@@ -409,13 +410,17 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             ret_st.append(dizio)
 
             ############################### LIME ################################
-            start_time = time.time()
+            start_time_lime = time.time()
             exp_lime = explainer_lime.explain_instance(diz['X_train'][0],
                                                        diz['model'].predict,
                                                        num_features=len(all_cols),
                                                        distance_metric='euclidean')
             #print('%s - ST - LIME' % filename)
-            print(f"- ST - LIME Total time {filename}: {(time.time() - start_time) / 60} minutes")
+            #print(f"- ST - LIME Total time {filename}: {(time.time() - start_time) / 60} minutes")
+            st_time_lime1 = f"- ST - LIME Total time {filename}: {(time.time() - start_time_lime) / 60} minutes"
+            with open('other_files/' + f"ST - LIME - Total time: {st_time_lime1}", 'w', encoding='utf-8') as t10:
+                json.dump(st_time_lime1, t10, cls=NumpyEncoder)
+
             #exp_lime.show_in_notebook(show_table = True)
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
@@ -448,7 +453,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                     variables.append((tt[2], mean_sum))
 
             lime_diz = {'batch %s' % k: {'row %s' % k: {
-                'ML_prediction': pred,
+                'ST_prediction': pred,
                 'LIME_LOCAL_prediction': exp_lime.local_pred,                       # xai local prediction
                 'LIME_GLOBAL_prediction': exp_lime.predicted_value,                # xai global prediction
                 'value_ordered': f_weight,                                          # (feature, lime_weight)
@@ -459,13 +464,16 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             lime_res_st.append(lime_diz)
 
             ################### ANCHORS #########################################
-            start_time = time.time()
+            start_time_anch = time.time()
             exp_anchor = explainer_anchor.explain_instance(diz['X_test'][0],
                                                            diz['model'].predict,
                                                            threshold=0.90,
                                                            beam_size=len(all_cols))
-            print('%s - ST - ANCHOR' % filename)
-            print(f" - ST - ANCHOR Total time {filename}: {(time.time() - start_time) / 60} minutes")
+            #print(f" - ST - ANCHOR Total time {filename}: {(time.time() - start_time) / 60} minutes")
+            st_anchor_time1 = f" - ST - ANCHOR Total time {filename}: {(time.time() - start_time_anch) / 60} minutes"
+            with open('other_files/' + f"ST - LIME - Total time: {st_anchor_time1}", 'w', encoding='utf-8') as t11:
+                json.dump(st_anchor_time1, t11, cls=NumpyEncoder)
+
             prediction_anch = diz['model'].predict(diz['X_test'].reshape(1, -1))[0]
             #prediction_anch = explainer_anchor.class_names[diz['model'].predict(diz['X_test'].reshape(1, -1))[0]]
 
@@ -548,13 +556,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             k += 1
 
 
-
-
-        # print()
-        # print('ST REGRESSION ANCHORS')
-        # print(anchor_res_st)
-
-
         # ST FILES
         with open('results/' + 'ST_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:
             json.dump(ret_st, f, cls=NumpyEncoder)
@@ -562,14 +563,21 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         with open('results/' + 'ST_LIME_%s.json' % filename, 'w', encoding='utf-8') as f11:
             json.dump(lime_res_st, f11, cls=NumpyEncoder)
 
-        #with open('other_files/' + 'ST_ANCHOR_REGRESSION_%s.json' % filename, 'w', encoding='utf-8') as f12:
-        with open('results/' + 'ST_ANCHOR_%s.json' % filename, 'w', encoding='utf-8') as f12:
+        with open('other_files/' + 'ST_ANCHOR_REGRESSION_%s.json' % filename, 'w', encoding='utf-8') as f12:
+        #with open('results/' + 'ST_ANCHOR_%s.json' % filename, 'w', encoding='utf-8') as f12:
             json.dump(anchor_res_st, f12, cls=NumpyEncoder)
 
         f.close()
         f11.close()
         f12.close()
+        t9.close()
+        t10.close()
+        t11.close()
+
         #return ret, lime_res, anchor_res
 
 print(f"xai_anas.py Total time: {(time.time() - first_time) / 60} minutes")
+# tot_time_anas = f"xai_anas.py Total time: {(time.time() - first_time) / 60} minutes"
+# with open('other_files/' + f"ST - ANCHOR - Total time: {tot_time_anas}", 'w', encoding='utf-8') as t8:
+#     json.dump(tot_time_anas, t8, cls=NumpyEncoder)
 print('END xai_anas')

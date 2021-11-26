@@ -1,25 +1,3 @@
-import warnings
-warnings.filterwarnings("ignore")
-
-import multiprocessing as mp
-print('Number of processor',mp.cpu_count())
-
-
-import XAI
-import xai_anas
-import RF_xai
-#import performance
-
-
-# Drift Methods
-from studentteacher.student_teacher import *
-from d3.D3 import *
-
-
-
-# Utilities
-from progress.bar import IncrementalBar
-import time
 import os
 
 # Create directories
@@ -34,12 +12,35 @@ if not os.path.exists('other_files'):
 
 
 
+import warnings
+warnings.filterwarnings("ignore")
+
+import multiprocessing as mp
+print('Number of processor',mp.cpu_count())
+
+
+import XAI
+import xai_anas
+import RF_xai
+import performance
+
+
+# Drift Methods
+from studentteacher.student_teacher import *
+from d3.D3 import *
+
+
+
+# Utilities
+from progress.bar import IncrementalBar
+import time
+
+
+
+
 
 
 # Setup
-#datasets = ['electricity', 'weather','forestcover', 'anas']
-#datasets = ['forestcover']
-
 #models = ['d3', 'student-teacher']
 models = ['d3']
 
@@ -66,7 +67,7 @@ def faicose_un_dataset(dataset_name):
         real_drift_points.append(drift_point)
 
 
-    print('real_drift_points', real_drift_points[0])
+    #print('real_drift_points', real_drift_points[0])
     # Training Phase
     if dataset_name in ['anas']:
         teacher = Teacher('RandomForestRegressor')
@@ -136,7 +137,6 @@ def faicose_un_dataset(dataset_name):
         XAI.d3_xai(d3, cols_to_print, cl, dataset_name)
         #XAI.st_xai(st, cols_to_print, cl, dataset_name)
 
-
     """
     # Monitoring data - PERFORM RANDOM FOREST (REGRESSION/CLASSIFICATION)
     for idx, s in enumerate(streams):
@@ -167,37 +167,42 @@ if __name__ == "__main__":
 
     # creating processes
     p1 = mp.Process(target=faicose_un_dataset, args=('electricity',))
-    #p2 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
-    #p3 = mp.Process(target=faicose_un_dataset, args=('weather',))
-    #p4 = mp.Process(target=faicose_un_dataset, args=('anas',))
+    """
+    p2 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
+    p3 = mp.Process(target=faicose_un_dataset, args=('weather',))
+    p4 = mp.Process(target=faicose_un_dataset, args=('anas',))"""
 
     # starting processes
     print(p1.start())
-    #print(p2.start())
-    #print(p3.start())
-    #print(p4.start())
+    """
+    print(p2.start())
+    print(p3.start())
+    print(p4.start())"""
 
 
     # process IDs
     print("ID of process p1: {}".format(p1.pid))
-    #print("ID of process p2: {}".format(p2.pid))
-    #print("ID of process p3: {}".format(p3.pid))
-    #print("ID of process p4: {}".format(p4.pid))
+    """
+    print("ID of process p2: {}".format(p2.pid))
+    print("ID of process p3: {}".format(p3.pid))
+    print("ID of process p4: {}".format(p4.pid))"""
 
     # wait until processes are finished
     p1.join()
-    #p2.join()
-    #p3.join()
-    #p4.join()
+    """
+    p2.join()
+    p3.join()
+    p4.join()"""
 
     # all processes finished
     print("All processes finished execution!")
 
     # check if processes are alive
     print("Process p1 is alive: {}".format(p1.is_alive()))
-    #print("Process p2 is alive: {}".format(p2.is_alive()))
-    #print("Process p3 is alive: {}".format(p3.is_alive()))
-    #print("Process p4 is alive: {}".format(p4.is_alive()))
+    """
+    print("Process p2 is alive: {}".format(p2.is_alive()))
+    print("Process p3 is alive: {}".format(p3.is_alive()))
+    print("Process p4 is alive: {}".format(p4.is_alive()))"""
 
 
 
@@ -207,8 +212,8 @@ if __name__ == "__main__":
 # json_files = [pos_json for pos_json in os.listdir(directory) if pos_json.endswith('.json')]
 # performance.read_files(json_files, path_to_json)
 
-#import performance
-#perf = performance
+print('Performance computation')
+perf = performance
 
 
 print(f"Total time: {(time.time() - start_time) / 60} minutes")
