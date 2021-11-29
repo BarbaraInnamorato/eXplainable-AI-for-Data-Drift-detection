@@ -1,3 +1,28 @@
+import warnings
+warnings.filterwarnings("ignore")
+
+import multiprocessing as mp
+print('Number of processor',mp.cpu_count())
+
+# Dataset loading
+from datasetloader.load_dataset import load_stream
+
+# Drift Methods
+from studentteacher.student_teacher import *
+from d3.D3 import *
+
+# XAI techniques
+import XAI
+import xai_anas
+import RF_xai
+
+# XAI Performace computation
+import performance
+
+# Utilities
+from progress.bar import IncrementalBar
+import time
+
 import os
 
 # Create directories
@@ -9,32 +34,6 @@ if not os.path.exists('images'):
 
 if not os.path.exists('other_files'):
     os.mkdir('other_files') # for anchor files and RF metrics
-
-
-
-import warnings
-warnings.filterwarnings("ignore")
-
-import multiprocessing as mp
-print('Number of processor',mp.cpu_count())
-
-
-import XAI
-import xai_anas
-import RF_xai
-import performance
-
-
-# Drift Methods
-from studentteacher.student_teacher import *
-from d3.D3 import *
-
-
-
-# Utilities
-from progress.bar import IncrementalBar
-import time
-
 
 
 
@@ -123,7 +122,7 @@ def faicose_un_dataset(dataset_name):
     print()
 
 
-
+    """
     # data for xai
     if dataset_name in ['anas']:
         #anas_st = anas_results['student-teacher'][0]
@@ -158,7 +157,7 @@ def faicose_un_dataset(dataset_name):
             RF_xai.rf_regression(to_export, cols_to_print, cl, dataset_name)
         else:
             #print('----------RANDOM FOREST %s'%dataset_name)
-            RF_xai.rf_classification(to_export, cols_to_print, cl, dataset_name)"""
+            RF_xai.rf_classification(to_export, cols_to_print, cl, dataset_name)
 
 
 

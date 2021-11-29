@@ -1,17 +1,12 @@
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold
-from sklearn.linear_model import LogisticRegression
+import sklearn
+
 from sklearn.metrics import roc_auc_score as AUC
-from sklearn.ensemble import ExtraTreesRegressor
-from sklearn.tree import DecisionTreeClassifier
-from sklearn import svm
-
-# scikit-multiflow
-from skmultiflow.data.data_stream import DataStream
-
 from progress.bar import IncrementalBar
+from sklearn.linear_model import LogisticRegression
 
+from datasetloader.load_dataset import *
 
 def drift_detector(S, T, threshold):
     """
@@ -44,28 +39,35 @@ def drift_detector(S, T, threshold):
     clf = LogisticRegression(solver='liblinear')
     # clf = svm.SVC(probability = True, class_weight = 'balanced')
     # clf = DecisionTreeClassifier()
-    predictions = np.zeros(labels.shape)
+    #predictions = np.zeros(labels.shape)
 
     # Divide ST into two equal chunks
     # Train LR on a chunk and classify the other chunk
     # Calculate AUC for original labels (in_target) and predicted ones
-    skf = StratifiedKFold(n_splits=2, shuffle=True)
-    for train_idx, test_idx in skf.split(ST, labels):
-        X_train, X_test = ST[train_idx], ST[test_idx]
-        y_train, y_test = labels[train_idx], labels[test_idx]
-        clf.fit(X_train, y_train)
-        probs = clf.predict_proba(X_test)[:, 1]
-        predictions[test_idx] = clf.predict(X_test)
-        # print(probs)
-        # predictions[test_idx] = probs
-        # print(predictions)
-    auc_score = AUC(labels, predictions)
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(ST, labels, test_size=0.2,
+                                                                                random_state=123, stratify=labels)
 
+    clf.fit(X_train, y_train)
+    probs = clf.predict_proba(X_test)[:, 1]
+    predictions = clf.predict(X_test)
+
+    auc_score = AUC(y_test, predictions)
+
+    shap_dict = {
+        'model': clf,
+        'X_train': X_train,
+        'X_test': X_test,
+        'y_train': y_train,
+        'y_test': y_test,
+        'pred_probs': probs,
+        'predictions': predictions,
+        'class_names': np.unique(y_train)
+    }
     # Signal drift if AUC is larger than the threshold
     if auc_score > threshold:
-        return True
+        return True, shap_dict
     else:
-        return False
+        return False, shap_dict
 
 
 class D3():
@@ -110,20 +112,21 @@ class D3():
 
     def driftCheck(self):
         # Uncomment the four lines to restore original functionality of D3
-        if drift_detector(self.win_data[:self.w], self.win_data[self.w:self.size],
-                          self.auc):  # returns true if drift is detected
+        drift, shap_dict = drift_detector(self.win_data[:self.w], self.win_data[self.w:self.size],
+                                          self.auc)
+        if drift:  # returns true if drift is detected
 
             self.window_index = self.w
             # self.win_data = np.roll(self.win_data, -1*self.w, axis=0)
             # self.win_label = np.roll(self.win_label, -1*self.w, axis=0)
             self.drift_count = self.drift_count + 1
 
-            return True
+            return True, shap_dict
         else:
             self.window_index = self.w
             # self.win_data = np.roll(self.win_data, -1*(int(self.w*self.rho)), axis=0)
             # self.win_label =np.roll(self.win_label, -1*(int(self.w*self.rho)), axis=0)
-            return False
+            return False, shap_dict
 
     def getCurrentData(self):
         return self.win_data[:self.window_index]
@@ -132,10 +135,14 @@ class D3():
         return self.win_label[:self.window_index]
 
 
-def d3_inference(train_results, win_lenght=100, rho=0.1, auc_score=0.7):
-    n_train = train_results["n_train"]
-    stream = train_results["Stream"]
-    X_train = train_results["X_train"]
+def d3_inference(drift_point,train_results, win_lenght=100, rho=0.1, auc_score=0.7):
+
+    #print('train res', train_results[0])
+    n_train = int(train_results[0]["n_train"])
+    stream = train_results[0]["Stream"]
+    X_train = train_results[0]["X_train"]
+    y_train = train_results[0]['y_train']  # for random forest
+
 
     stream.restart()
     stream.next_sample(n_train)
@@ -148,17 +155,27 @@ def d3_inference(train_results, win_lenght=100, rho=0.1, auc_score=0.7):
 
     bar = IncrementalBar('D3_inference', max=stream.n_remaining_samples())
     i = n_train
+    list_shap_dict = []
+
     while stream.has_more_samples():
         bar.next()
         X = stream.next_sample()[0]
         if D3_win.isEmpty():
             D3_win.addInstance(X)
         else:
-            if D3_win.driftCheck():  # detected
-                results['detected_drift_points'].append(i)
+            drift, shap_dict = D3_win.driftCheck()
+            if drift:  # detected
+                if i > drift_point:
+                    print('---------------------CONCEPT DRIFT after drifted row----------------\n')
+                    results['detected_drift_points'].append(i)
+                    list_shap_dict.append(shap_dict)
+
+
+                else:
+                    print('---------------------FALSE ALARM----------------------------------\n')
             else:
                 pass
         i += 1
     bar.finish()
 
-    return results
+    return list_shap_dict

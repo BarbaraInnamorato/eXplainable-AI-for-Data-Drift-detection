@@ -1,6 +1,5 @@
 import random
 import numpy as np
-import pandas as pd
 
 import math
 
@@ -91,4 +90,7 @@ def inject_drift(X, y, min_point=0.7, max_point=0.9, classification=True):
     d_point = create_drift_points(X, min_point, max_point)
     X = swap_columns(X, y, d_point['cols'], d_point['row'], classification)
 
-    return X, y, d_point["row"]
+    print('\tswapped columns', d_point['cols'], 'starting from row', d_point["row"], '\n\n')
+
+
+    return X, y, d_point["row"], d_point['cols']
