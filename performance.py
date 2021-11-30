@@ -4,14 +4,16 @@ import matplotlib
 import matplotlib.pyplot as plt
 import json
 import os
-
+matplotlib.use('Agg')
 
 if not os.path.exists('performances'):
     os.mkdir('performances')
 
+
 def precision_k(predicted, actual, k):
     predicted_selected = predicted[:k]
     return len(set(predicted_selected) & set(actual)) / k
+
 
 def recall_k(predicted, actual, k):
     predicted_selected = predicted[:k]
@@ -53,13 +55,11 @@ ecc...
 
 """
 
-matplotlib.use('Agg')
 
-path_to_json = 'results/'
-directory = r'C:\Users\binnamorato\PycharmProjects\TESI_BARBARA\results'
-json_files = [pos_json for pos_json in os.listdir(directory) if pos_json.endswith('.json')]
-
-def read_files(folder, path_to_json):
+def read_files():
+    path_to_json = 'results/'
+    directory = r'C:\Users\binnamorato\PycharmProjects\TESI_BARBARA\results'
+    folder = [pos_json for pos_json in os.listdir(directory) if pos_json.endswith('.json')]
 
     for index, js in enumerate(folder):
         with open(os.path.join(path_to_json, js)) as json_file:
@@ -168,4 +168,3 @@ def read_files(folder, path_to_json):
                     json_file.close()
                     plt.close('all')
 
-#read_files(json_files, path_to_json)

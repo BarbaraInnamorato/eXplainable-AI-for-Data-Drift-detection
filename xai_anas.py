@@ -53,7 +53,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
         #predict_for_anchors = lambda x: diz['model'].predict_proba(x)  # COMMON PREDICTION FUNCTION (TO CHECK)
 
-        explainer_shap = shap.KernelExplainer(diz['model'].predict, shap.sample(train_set,nsamples=80, random_state=0))
+        explainer_shap = shap.KernelExplainer(diz['model'].predict, shap.sample(train_set,nsamples=100, random_state=0))
 
         explainer_lime = lime.lime_tabular.LimeTabularExplainer(diz['X_train'],
                                                                 mode='regression',
@@ -342,22 +342,29 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
             test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
             class_names = np.unique(diz['y_train'])
-            #print('class names', class_names)
+            #train_sample = shap.sample(train_set, nsamples=100, random_state=0),  # se no train_set
 
             ##################  SETTING XAI EXPLAINERS  ##############################
             #predict_for_anchors = lambda x: diz['model'].predict(x)  # COMMON PREDICTION FUNCTION (TO CHECK)
 
-            explainer_shap = shap.KernelExplainer(diz['model'].predict, shap.sample(train_set,nsamples=80, random_state=0))
+            explainer_shap = shap.KernelExplainer(diz['model'].predict,
+                                                  #train_set,
+                                                  shap.sample(train_set, nsamples=100, random_state=90),
+                                                  #nsamples=100,
+                                                  #random_state=90,
+                                                  link = 'identity',
+                                                  l1_reg = len(all_cols)
+                                                  )
 
             explainer_lime = lime.lime_tabular.LimeTabularExplainer(diz['X_train'],
                                                                     mode='regression',
                                                                     feature_names=all_cols,
-                                                                    feature_selection='auto',
+                                                                    feature_selection='none',
                                                                     discretize_continuous=True,
                                                                     verbose=False)
 
             explainer_anchor = anchor_tabular.AnchorTabularExplainer(#predict_for_anchors,
-                                                                    class_names=diz['class_names'],
+                                                                     class_names=diz['class_names'],
                                                                      #diz['model'].predict,
                                                                      feature_names=all_cols,
                                                                      train_data=diz['X_train'],
@@ -377,10 +384,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             '''
 
             start_time_s = time.time()
-            shap_values = explainer_shap.shap_values(test_set)  # test set è una riga
+            shap_values = explainer_shap.shap_values(test_set,  nsamples=100)  # test set è una riga
             #print(f"- ST - SHAP Total time {filename}: {(time.time() - start_time_s) / 60} minutes")
             st_time_shap1 = f"- ST - SHAP Total time {filename}: {(time.time() - start_time_s) / 60} minutes"
-            with open('other_files/' + f"ST - SHAP - Total time", 'w', encoding='utf-8') as t9:
+            with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t9:
                 json.dump(st_time_shap1, t9, cls=NumpyEncoder)
 
 
@@ -389,7 +396,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
             # Get the force plot for each row
             shap.initjs()
-            shap.plots.force(explainer_shap.expected_value, shap_values, test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)
+            shap.plots.force(explainer_shap.expected_value, shap_values, test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6, figsize=(50,12))
             plt.title(f'Local Force plot row {str(k)}')
             plt.tight_layout()
             plt.savefig('images/'+ f'ST Local forceplot row {str(k)} dataset {filename}')
@@ -397,15 +404,20 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
-            model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)
-            #print('ST anas model output', model_output)
+            model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # list of probs
+            print('ST model output anas', model_output)
+            class_pred = np.argmax(abs(model_output))
+
 
             dizio = {'batch %s' % k: {'row %s' % k: {
-                'shap_values': shap_values,
-                'ML_prediction': pred,                      # st prediction
-                'value_ordered': feat_shap_val,             # (feature, shap_value)
-                'swapped': swap_shap,                       # (feature, bool),
-                'shap_prediction': model_output,            # xai prediction
+                'class_names': class_names,
+                'd3_prediction': pred,  # D3 class predicted
+                'SHAP_probs': model_output,
+                'is ML correct': class_pred == pred,
+                'value_ordered': feat_shap_val,  # (feature, shap_value) : ordered list
+                'swapped': swap_shap,  # (feature, bool) : ordered list of swapped variables
+                'shap_prediction': class_pred,  # xai prediction : class
+                'shap_values': shap_values
             }}}
             ret_st.append(dizio)
 
@@ -418,10 +430,14 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             #print('%s - ST - LIME' % filename)
             #print(f"- ST - LIME Total time {filename}: {(time.time() - start_time) / 60} minutes")
             st_time_lime1 = f"- ST - LIME Total time {filename}: {(time.time() - start_time_lime) / 60} minutes"
-            with open('other_files/' + f"ST - LIME - Total time: {st_time_lime1}", 'w', encoding='utf-8') as t10:
+            with open('other_files/' + f"ST - LIME - Total time {filename}: {st_time_lime1}", 'w', encoding='utf-8') as t10:
                 json.dump(st_time_lime1, t10, cls=NumpyEncoder)
 
-            #exp_lime.show_in_notebook(show_table = True)
+            lime_prediction = exp_lime.local_pred
+            exp_lime.as_pyplot_figure().tight_layout()
+            plt.text(0.3, 0.7, f' D3 Local LIME row {str(k)}')
+            plt.savefig('images/' + f' ST Local LIME row {str(k)} dataset {filename}')
+            exp_lime.save_to_file(f'lime_row_{str(k)}.html') #save_to_file('lime.html')
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
 
@@ -452,13 +468,16 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                     mean_sum = round((float(tt[0]) + float(tt[-1])) / 2, 3)  # caso in cui il valore di un feature è in un range di valori
                     variables.append((tt[2], mean_sum))
 
+
             lime_diz = {'batch %s' % k: {'row %s' % k: {
-                'ST_prediction': pred,
-                'LIME_LOCAL_prediction': exp_lime.local_pred,                       # xai local prediction
-                'LIME_GLOBAL_prediction': exp_lime.predicted_value,                # xai global prediction
-                'value_ordered': f_weight,                                          # (feature, lime_weight)
-                'feature_value': variables,                                         # (feature, real value)
+                'class_names': class_names,
+                'ST_prediction': pred,  # ST prediction
+                'LIME_LOCAL_prediction': lime_prediction,  # xai prediction
+                'LIME_GLOBAL_prediction': exp_lime.predicted_value,  # xai global prediction
+                'value_ordered': f_weight,  # (feature, lime_weight)
+                'feature_value': variables,  # (feature, real value)
                 'swapped': swap  # (feature, bool)
+
             }}}
 
             lime_res_st.append(lime_diz)
@@ -471,13 +490,13 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                            beam_size=len(all_cols))
             #print(f" - ST - ANCHOR Total time {filename}: {(time.time() - start_time) / 60} minutes")
             st_anchor_time1 = f" - ST - ANCHOR Total time {filename}: {(time.time() - start_time_anch) / 60} minutes"
-            with open('other_files/' + f"ST - LIME - Total time: {st_anchor_time1}", 'w', encoding='utf-8') as t11:
+            with open('other_files/' + f"ST - LIME - Total time {filename}: {st_anchor_time1}", 'w', encoding='utf-8') as t11:
                 json.dump(st_anchor_time1, t11, cls=NumpyEncoder)
 
             prediction_anch = diz['model'].predict(diz['X_test'].reshape(1, -1))[0]
             #prediction_anch = explainer_anchor.class_names[diz['model'].predict(diz['X_test'].reshape(1, -1))[0]]
 
-            # exp_anchor.show_in_no.show_in_notebook()
+            # exp_anchor.show_in_notebook()
             # exp_anchor.examples(only_different_prediction = True)
             # print('esempi',exp_anchor.examples()) #np.ndarray
 

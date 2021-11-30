@@ -17,8 +17,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 
-
-
 first_time = time.time()
 
 
@@ -78,18 +76,24 @@ def rf_regression(to_export, cols, all_cols, filename):
     plt.tight_layout()
     plt.savefig('images/' + 'RF Permutation Feature Importance %s' % filename)
 
-
+    #sample_train = shap.sample(to_export['X_train'], nsamples=100, random_state=0)
     # Global explanation for the performance of RANDOM FOREST
-    explainer = shap.KernelExplainer(rfc.predict, shap.sample(to_export['X_train'], nsamples=80, random_state=0))
+    explainer = shap.KernelExplainer(rfc.predict, to_export['X_train'],
+                                     nsamples=100,
+                                     random_state=90,
+                                     link = 'identity',
+                                     l1_reg = len(all_cols))
+
     start_time = time.time()
-    shap_values = explainer.shap_values(to_export['X_test_post'])
+    shap_values = explainer.shap_values(to_export['X_test_post']) # provo a usare un sample
+    #shap_values = explainer.shap_values(shap.sample(to_export['X_test_post'], nsamples=100, random_state=0), l1_reg = len(all_cols))
     #print('shap val regression', shap_values)
     print(f"RF_REGRESSION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
     model_output_rf = (explainer.expected_value + shap_values.sum()).round(4)
     print('model output RF SHAP', model_output_rf)
 
     # Make plot. Index of [1] arbitrary
-    shap.summary_plot(shap_values, to_export['X_test_post'], feature_names=all_cols, plot_type="bar", show=False)
+    shap.summary_plot(shap_values, to_export['X_test_post'], feature_names=all_cols, plot_type="dot", show=False, figsize=(50,12))
     plt.title('SHAP summary plot - REGRESSION')
     plt.tight_layout()
     plt.savefig('images/RF_regression_Summary_plot_%s' % filename)
@@ -114,26 +118,19 @@ def rf_regression(to_export, cols, all_cols, filename):
     f1.close()
 
 
-
-
-
-
-
-
 def rf_classification(to_export, cols, all_cols, filename):
     rfc = RandomForestClassifier(max_features=int(np.sqrt(len(all_cols))))
     """
     RandomForestClassifier : criterion= ' gini',  boostrap = True, oob = True #default args
     """
     rfc.fit(to_export['X_train'], to_export['y_train'])
-    #print_accuracy(rfc.predict, to_export['X_train'], to_export['y_train'])
     class_names = np.unique(to_export['y_train'])
 
-    avg = None
+    avg = ''
     if len(class_names) == 2:
-        avg = 'binary'
+        avg += 'binary'
     else:
-        avg = 'weighted'
+        avg += 'weighted'
 
     # F1-score on test set before the drift point
     pred_test_pre = rfc.predict(to_export['X_test_pre'])
@@ -142,8 +139,6 @@ def rf_classification(to_export, cols, all_cols, filename):
     # F1-score on test set after the drift point
     pred_test_post = rfc.predict(to_export['X_test_post'])
     score_test_post = sklearn.metrics.f1_score(to_export['y_test_post'], pred_test_post, average=avg)
-    print('len pred_test_post', len(pred_test_post))
-    print('len X_test_post', len(to_export['X_test_post']))
 
 
     # """
@@ -180,7 +175,6 @@ def rf_classification(to_export, cols, all_cols, filename):
     #print('PERM IMPORTANCE 1')
     result = permutation_importance(rfc, to_export['X_test_post'], to_export['y_test_post'], n_repeats=10, random_state=42, n_jobs=2 )
     sorted_idx = result.importances_mean.argsort()
-    #print('sorted_idx'), sorted_idx
 
     fig, ax = plt.subplots()
     ax.boxplot(result.importances[sorted_idx].T, vert=False, labels=[all_cols[el] for el in sorted_idx])
@@ -215,16 +209,22 @@ def rf_classification(to_export, cols, all_cols, filename):
 
     # Global explanation for the performance of RANDOM FOREST
     #print('faccio explainer')
-    explainer = shap.KernelExplainer(rfc.predict_proba, shap.sample(to_export['X_train'],nsamples=80, random_state=0))
-    #print('explainer finito, ora shap values')
+    sample_train = shap.sample(to_export['X_train'],nsamples=100, random_state=0)
+    explainer = shap.KernelExplainer(rfc.predict_proba, sample_train, feature_names=all_cols)
+    print('explainer finito CLASSIFIC, ora shap values')
     start_time = time.time()
     shap_values = explainer.shap_values(to_export['X_test_post'])
-    model_output = (explainer.expected_value + shap_values[0].sum()).round(4)
-    class_pred = np.argmax(abs(model_output))
-    print(f"RF_CLASSIFICATION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
+    #shap_values = explainer.shap_values(shap.sample(to_export['X_test_post'],nsamples=100, random_state=0) ,l1_reg = len(all_cols))
 
-    # Make plot. Index of [1] arbitrary
-    shap.summary_plot(shap_values[1], to_export['X_test_post'], feature_names=all_cols,show=False)
+    print(f"RF_CLASSIFICATION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
+    print('shap val CLASSIFIC RF', len(shap_values),shap_values)
+    model_output = (explainer.expected_value + shap_values[1].sum()).round(4)
+    class_pred = np.argmax(abs(model_output))
+
+    # Make plot. Index of [1] arbitrary because 1 = concept drift
+    shap.summary_plot(shap_values, to_export['X_test_post'], feature_names=all_cols,plot_type = 'bar', show=False)
+    shap.summary_plot(shap_values[1], to_export['X_test_post'], feature_names=all_cols, plot_type = 'dot',show=False)
+
     plt.title(f'RF SHAP summary plot {filename}')
     plt.tight_layout()
     plt.savefig('images/RF_Summary_plot_%s' % filename)

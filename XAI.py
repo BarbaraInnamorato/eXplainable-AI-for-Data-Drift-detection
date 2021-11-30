@@ -44,25 +44,33 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     anchor_res.append({'swapped columns': cols})
     anchor_res.append({'columns': all_cols})
 
+    time_shap = []
+
     for diz in data_for_xai[-1:]:
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
         test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
 
         class_names = np.unique(diz['y_train'])
-        #print('class names', class_names, type(class_names))
 
         k = 0
 
         print("D3 train accuracy: %0.3f" % diz['model'].score(train_set, diz['y_train']))
         print("D3 test accuracy: %0.3f" % diz['model'].score(test_set, diz['y_test']))
 
+
         # Setting explainers
-        explainer_shap = shap.KernelExplainer(diz['model'].predict_proba, shap.sample(train_set,nsamples=80, random_state=0)) #se no train_set
+        explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
+                                              train_set,
+                                              nsamples=100,
+                                              random_state=90,
+                                              link='identity',
+                                              l1_reg=len(all_cols)
+                                              )
 
         explainer_lime = lime.lime_tabular.LimeTabularExplainer(diz['X_train'],
                                                                 mode='classification',
                                                                 feature_names=all_cols,
-                                                                #feature_selection='auto',
+                                                                feature_selection='none',
                                                                 discretize_continuous=True,
                                                                 discretizer='quartile',
                                                                 verbose=True)
@@ -74,6 +82,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                                 )
 
         # Start explanations
+
         for i in range(len(diz['X_test'])):  # da 0 a 66-1
             pred = diz['predictions'][i]
             predict_proba = diz['model'].predict_proba(diz['X_test'][i].reshape(1, -1))[0]
@@ -89,18 +98,11 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             start_time_sh = time.time()
             shap_values = explainer_shap.shap_values(test_set.iloc[i, :])
             time_shap1 = f"D3 - SHAP - Total time {filename}: {(time.time() - start_time_sh) / 60} minutes"
-            with open('other_files/' + f"D3 - SHAP - Total time", 'w', encoding='utf-8') as t1:
-                json.dump(time_shap1, t1, cls=NumpyEncoder)
-            #print(f"D3 - SHAP - Total time {filename}: {(time.time() - start_time) / 60} minutes")
 
+            # print(f"D3 - SHAP - Total time {filename}: {(time.time() - start_time) / 60} minutes")
+            time_shap.append({'start':start_time_sh, 'end':time_shap1, 'iter':i})
             model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4) #list of probs
-
-            #print('\n D3 model output', model_output)
             class_pred = np.argmax(abs(model_output))
-            #print('\n class pred', class_pred)
-            #prob_shap = model_output[class_pred]
-            #prob_d3 = predict_proba[pred]
-
 
             # questo mo_output è l'output della black-box
             #mo_output = (explainer_shap.expected_value[class_pred] + shap_values[class_pred].sum()).round(4)
@@ -110,16 +112,14 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
             # Get the force plot for each row
             shap.initjs()
-            shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred],test_set.iloc[i,:], feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)
-            #name = 'Local Force plot row %s, dataset: %s'%(k,filename)
-            plt.title(f'Local forceplot row {str(i)} dataset {filename}', position=(0.3, 0.7))
+            shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred],test_set.iloc[i,:], feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
+            #plt.title(f'Local forceplot row {str(i)} dataset {filename}', position=(0.3, 0.7))
             plt.tight_layout()
             plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
 
 
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], round(tup[0], 3)) for tup in ordered_shap_list]
-            #higher_lower = [(tup[1], 'to 1' if tup[0] > 0.0 else 'to 0') for tup in ordered_shap_list]
 
             dizio = {'batch %s' % k: {'row %s' % i: {
                 'class_names': class_names,
@@ -130,7 +130,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'value_ordered': feat_shap_val,                                 # (feature, shap_value) : ordered list
                 'swapped': swap_shap,                                           # (feature, bool) : ordered list of swapped variables
                 'shap_prediction': class_pred,                                  # xai prediction : class
-               # 'high_low': higher_lower,                                       # pushing prediction to 1(higher) or to 0 (lower)
                 'shap_values': shap_values
             }}}
             ret.append(dizio)
@@ -151,13 +150,13 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
             ###
             time_lime1 = f"D3 - LIME - Total time: {(time.time() - start_time_lime) / 60} minutes"
-            with open('other_files/' + f"D3 - LIME - Total time", 'w', encoding='utf-8') as t2:
+            with open('other_files/' + f"D3 - LIME - Total time {filename}", 'w', encoding='utf-8') as t2:
                 json.dump(time_lime1, t2, cls=NumpyEncoder)
             #print(f"D3 - LIME - Total time: {(time.time() - start_time) / 60} minutes")
 
-            #lime_probs = list(exp_lime.predict_proba)  # prob of being in class 0 or in class 1 - stesse della blac-box
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
+
             lime_prediction = exp_lime.local_pred
             lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
             exp_lime.as_pyplot_figure().tight_layout()
@@ -165,7 +164,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             #plt.subtitle(f' D3 Local LIME row {str(i)}', y=1.05, fontsize=18)
             plt.savefig('images/' +f' D3 Local LIME row {str(i)} dataset {filename}')
 
-            #exp_lime.show_in_notebook(show_table = True) #OPTIONAL
+            #exp_lime.save_to_file(f'lime_row_{str(i)}.html') #OPTIONAL
 
             variables = []  # (name, real value)
             f_weight = []  # (feature, weight)
@@ -228,15 +227,18 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                     explainer=explainer_lime,
                                                     num_features=len(all_cols),
                                                     predict_fn=diz['model'].predict_proba,
-                                                    num_exps_desired=10,
+                                                    #num_exps_desired=10,
                                                     sample_size=20,
-                                                    top_labels=2)
+                                                    top_labels=len(class_names)
+                                                    )
             # Plot the 10 explanations
             #[exp.as_pyplot_figure().savefig('images/'+ f'pl {filename}').tight_layout() for exp in sp_obj.sp_explanations]
 
 
-
-            ###
+            #sp_explanations: A list of explanation objects that has a high coverage
+            #explanations: All the candidate explanations saved for potential future use.
+            #to compute LIME COVERAGE: len(sp_obj.sp_explanations) / len(sp_obj.explanations)
+            
             df=pd.DataFrame({})
             for this_label in range(len(class_names)):
                 print('this_label', this_label)
@@ -250,32 +252,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 #dftest=pd.DataFrame(dfl)
                 df=df.append(pd.DataFrame(dfl,index=[class_names[this_label] for i in range(len(sp_obj.sp_explanations))]))
             print('SUBMODULAR PICK', df.head())
-            ###
-
-            # [exp_lime.as_pyplot_figure(label=exp_lime.available_labels()[0]) for exp_lime in sp_obj.sp_explanations]
-            # # Make it into a dataframe
-            W_pick = pd.DataFrame(
-                [dict(this.as_list(this.available_labels()[0])) for this in sp_obj.sp_explanations]).fillna(0)
-
-            W_pick['prediction'] = [this.available_labels()[0] for this in sp_obj.sp_explanations]
-
-            # Making a dataframe of all the explanations of sampled points
-            W = pd.DataFrame([dict(this.as_list(this.available_labels()[0])) for this in sp_obj.explanations]).fillna(0)
-            W['prediction'] = [this.available_labels()[0] for this in sp_obj.explanations]
-
-            # Plotting the aggregate importances
-            fig = np.abs(W.drop("prediction", axis=1)).mean(axis=0).sort_values(ascending=False).head(5).sort_values(
-                ascending=True)#.iplot(kind="barh")
-            plt.savefig('fig')
-
-            # Aggregate importances split by classes
-            grped_coeff = W.groupby("prediction").mean()
-
-            grped_coeff = grped_coeff.T
-            grped_coeff["abs"] = np.abs(grped_coeff.iloc[:, 0])
-            grped_coeff.sort_values("abs", inplace=True, ascending=False)
-            figa = grped_coeff.head(25).sort_values("abs", ascending=True).drop("abs", axis=1)#.iplot(kind="barh", bargap=0.5)
-            plt.savefig('figa')"""
+            """
 
             #############################  ANCHORS  ###########################
             '''
@@ -305,7 +282,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                            beam_size=len(all_cols))
             #print(f"D3 -ANCHOR - Total time: {(time.time() - start_time) / 60} minutes")
             time_anchor1 = f"D3 -ANCHOR - Total time: {(time.time() - start_time_anchor) / 60} minutes"
-            with open('other_files/' + f"D3 - ANCHOR - Total time", 'w', encoding='utf-8') as t3:
+            with open('other_files/' + f"D3 - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t3:
                 json.dump(time_anchor1, t3, cls=NumpyEncoder)
 
             prediction = explainer_anchor.class_names[diz['model'].predict(diz['X_test'][i].reshape(1, -1))[0]]
@@ -409,6 +386,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     #with open('results/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
 
+    with open('other_files/' + f"D3 - SHAP - Total time {filename}", 'w', encoding='utf-8') as t1:
+        json.dump(time_shap, t1, cls=NumpyEncoder)
     #return ret, anchor_res, lime_res
 
     f.close()
@@ -447,12 +426,19 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         class_names = np.unique(diz['y_train'])
 
-        explainer_shap = shap.KernelExplainer(diz['model'].predict_proba, shap.sample(train_set,nsamples=80, random_state=0))
+        explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
+                                              train_set,
+                                              nsamples=100,
+                                              random_state=90,
+                                              link='identity',
+                                              l1_reg = len(all_cols)
+                                              )
+
 
         explainer_lime = lime.lime_tabular.LimeTabularExplainer(diz['X_train'],
                                                                 mode='classification',
                                                                 feature_names=all_cols,
-                                                                #feature_selection='auto',
+                                                                feature_selection='none',
                                                                 discretize_continuous=True,
                                                                 discretizer='quartile',
                                                                 verbose=False)
@@ -476,15 +462,15 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         '''
         start_time = time.time()
-        shap_values = explainer_shap.shap_values(test_set)  # test set è una riga
+        shap_values = explainer_shap.shap_values(test_set) # test set è una riga
         #print(f"-ST -SHAP Total time {filename}: {(time.time() - start_time) / 60} minutes")
         time_shap2 = f"-ST -SHAP Total time {filename}: {(time.time() - start_time) / 60} minutes"
-        with open('other_files/' + f"ST - SHAP - Total time", 'w', encoding='utf-8') as t4:
+        with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t4:
             json.dump(time_shap2, t4, cls=NumpyEncoder)
 
         #expected_values = list(explainer_shap.expected_value)
-        #print(f'ST shap values {filename}', shap_values)
-        #print(f'ST expected values {filename}', explainer_shap.expected_value)
+        print(f'ST shap values {filename}', shap_values)
+        print(f'ST expected values {filename}', explainer_shap.expected_value)
 
         model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4)
         class_pred = np.argmax(abs(model_output))
@@ -495,8 +481,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         # Get the force plot for each row
         shap.initjs()
-        shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred], test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)
-        plt.title('Local Force plot row %s'%k)
+        shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred], test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
+        #plt.title('Local Force plot row %s'%k)
         name = f'ST Local Force plot row {str(k)}, dataset {filename}'
         plt.tight_layout()
         plt.savefig('images/'+ name)
@@ -527,7 +513,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         print('%s -ST - LIME' % filename)
         #print(f"Total time: {(time.time() - start_time) / 60} minutes")
         time_lime2 = f"Total time: {(time.time() - start_time) / 60} minutes"
-        with open('other_files/' + f"ST - LIME - Total time", 'w', encoding='utf-8') as t5:
+        with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t5:
             json.dump(time_lime2, t5, cls=NumpyEncoder)
 
         #lime_probs = list(exp_lime.predict_proba)  # prob of being in class 0 or in class 1
@@ -633,7 +619,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         #print(f"Total time: {(time.time() - start_time) / 60} minutes")
         time_anchor2 = f"Total time: {(time.time() - start_time) / 60} minutes"
-        with open('other_files/' + f"ST - ANCHOR - Total time", 'w', encoding='utf-8') as t6:
+        with open('other_files/' + f"ST - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t6:
             json.dump(time_anchor2, t6, cls=NumpyEncoder)
 
         prediction_anch = explainer_anchor.class_names[diz['model'].predict(diz['X_test'].reshape(1, -1))[0]]
