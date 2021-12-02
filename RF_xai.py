@@ -76,42 +76,45 @@ def rf_regression(to_export, cols, all_cols, filename):
     plt.tight_layout()
     plt.savefig('images/' + 'RF Permutation Feature Importance %s' % filename)
 
-    #sample_train = shap.sample(to_export['X_train'], nsamples=100, random_state=0)
+    sample_train = shap.sample(to_export['X_train'], nsamples=100, random_state=90)
     # Global explanation for the performance of RANDOM FOREST
-    explainer = shap.KernelExplainer(rfc.predict, to_export['X_train'],
-                                     nsamples=100,
-                                     random_state=90,
+    explainer = shap.KernelExplainer(rfc.predict, sample_train,
+                                     feature_names=all_cols,
                                      link = 'identity',
                                      l1_reg = len(all_cols))
 
+    print('explainer finito REGRESSION, ora shap values')
     start_time = time.time()
     shap_values = explainer.shap_values(to_export['X_test_post']) # provo a usare un sample
-    #shap_values = explainer.shap_values(shap.sample(to_export['X_test_post'], nsamples=100, random_state=0), l1_reg = len(all_cols))
-    #print('shap val regression', shap_values)
-    print(f"RF_REGRESSION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
+    print('shap val RF regression \n', shap_values)
+    end_time = (time.time() - start_time) / 60
+
+    #print(f"RF_REGRESSION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
     model_output_rf = (explainer.expected_value + shap_values.sum()).round(4)
     print('model output RF SHAP', model_output_rf)
 
-    # Make plot. Index of [1] arbitrary
+    # Make plot
     shap.summary_plot(shap_values, to_export['X_test_post'], feature_names=all_cols, plot_type="dot", show=False, figsize=(50,12))
     plt.title('SHAP summary plot - REGRESSION')
     plt.tight_layout()
     plt.savefig('images/RF_regression_Summary_plot_%s' % filename)
 
     # https://scikit-learn.org/stable/modules/model_evaluation.html#mean-tweedie-deviance # metrics explantion
-    diz_rf = {  "shap prediction": model_output_rf,
-                'Random Forest feature importance': importances,
-                'Mean Absolute Error (MAE):':metrics.mean_absolute_error(to_export['y_test_post'], prediction_post),
-                'Mean Squared Error (MSE):': metrics.mean_squared_error(to_export['y_test_post'], prediction_post),
-                'Root Mean Squared Error (RMSE):': metrics.mean_squared_error(to_export['y_test_post'], prediction_post, squared=False),
-                'Mean Absolute Percentage Error (MAPE):': metrics.mean_absolute_percentage_error(to_export['y_test_post'], prediction_post),
-                'Explained Variance Score:': metrics.explained_variance_score(to_export['y_test_post'], prediction_post),
-                'Max Error:': metrics.max_error(to_export['y_test_post'], prediction_post),
-                'Mean Squared Log Error:': metrics.mean_squared_log_error(to_export['y_test_post'], prediction_post),
-                'Median Absolute Error:': metrics.median_absolute_error(to_export['y_test_post'], prediction_post),
-                'R^2:': metrics.r2_score(to_export['y_test_post'], prediction_post),
-                'Mean Poisson Deviance:': metrics.mean_poisson_deviance(to_export['y_test_post'], prediction_post),
-                }
+    diz_rf = {"shap prediction": model_output_rf,
+              'Random Forest feature importance': importances,
+              'Mean Absolute Error (MAE):':metrics.mean_absolute_error(to_export['y_test_post'], prediction_post),
+              'Mean Squared Error (MSE):': metrics.mean_squared_error(to_export['y_test_post'], prediction_post),
+              'Root Mean Squared Error (RMSE):': metrics.mean_squared_error(to_export['y_test_post'], prediction_post, squared=False),
+              'Mean Absolute Percentage Error (MAPE):': metrics.mean_absolute_percentage_error(to_export['y_test_post'], prediction_post),
+              'Explained Variance Score:': metrics.explained_variance_score(to_export['y_test_post'], prediction_post),
+              'Max Error:': metrics.max_error(to_export['y_test_post'], prediction_post),
+              'Mean Squared Log Error:': metrics.mean_squared_log_error(to_export['y_test_post'], prediction_post),
+              'Median Absolute Error:': metrics.median_absolute_error(to_export['y_test_post'], prediction_post),
+              'R^2:': metrics.r2_score(to_export['y_test_post'], prediction_post),
+              'Mean Poisson Deviance:': metrics.mean_poisson_deviance(to_export['y_test_post'], prediction_post),
+              'time': end_time
+
+              }
 
     with open('other_files/RF_METRICS_REGRESSION_POST_%s.json' % filename, 'w', encoding='utf-8') as f1:
         json.dump(diz_rf, f1, cls=NumpyEncoder)
@@ -209,25 +212,32 @@ def rf_classification(to_export, cols, all_cols, filename):
 
     # Global explanation for the performance of RANDOM FOREST
     #print('faccio explainer')
-    sample_train = shap.sample(to_export['X_train'],nsamples=100, random_state=0)
-    explainer = shap.KernelExplainer(rfc.predict_proba, sample_train, feature_names=all_cols)
+    sample_train = shap.sample(to_export['X_train'],nsamples=100, random_state=90)
+    explainer = shap.KernelExplainer(rfc.predict_proba,
+                                     sample_train,
+                                     feature_names=all_cols,
+                                     link = 'identity',
+                                     l1_reg = len(all_cols))
     print('explainer finito CLASSIFIC, ora shap values')
     start_time = time.time()
     shap_values = explainer.shap_values(to_export['X_test_post'])
-    #shap_values = explainer.shap_values(shap.sample(to_export['X_test_post'],nsamples=100, random_state=0) ,l1_reg = len(all_cols))
-
-    print(f"RF_CLASSIFICATION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
+    tot_time = (time.time() - start_time) / 60
+    #print(f"RF_CLASSIFICATION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
     print('shap val CLASSIFIC RF', len(shap_values),shap_values)
     model_output = (explainer.expected_value + shap_values[1].sum()).round(4)
     class_pred = np.argmax(abs(model_output))
 
-    # Make plot. Index of [1] arbitrary because 1 = concept drift
+    fig = plt.figure(constrained_layout=True)
     shap.summary_plot(shap_values, to_export['X_test_post'], feature_names=all_cols,plot_type = 'bar', show=False)
-    shap.summary_plot(shap_values[1], to_export['X_test_post'], feature_names=all_cols, plot_type = 'dot',show=False)
+    fig.title(f'RF SHAP summary plot DOT {filename}')
+    fig.tight_layout()
+    fig.savefig('images/RF_BAR_Summary_plot_%s' % filename)
 
-    plt.title(f'RF SHAP summary plot {filename}')
+    # Make plot. Index of [1] arbitrary because 1 = concept drift
+    shap.summary_plot(shap_values[1], to_export['X_test_post'], feature_names=all_cols, plot_type = 'dot',show=False)
+    plt.title(f'RF SHAP summary plot DOT {filename}')
     plt.tight_layout()
-    plt.savefig('images/RF_Summary_plot_%s' % filename)
+    plt.savefig('images/RF_BARSummary_plot_%s' % filename)
 
     #prediction_pre = rfc.predict_proba(to_export['X_test_pre'])
     #pred_pre = rfc.predict(to_export['X_test_pre'])
@@ -237,7 +247,7 @@ def rf_classification(to_export, cols, all_cols, filename):
 
     #print('Compute accuracy metrics for random forest classification')
     diz_rf_cl = {"shap prediction": class_pred,
-                "RF train accuracy": rfc.score(to_export['X_train'], to_export['y_train']),
+                 "RF train accuracy": rfc.score(to_export['X_train'], to_export['y_train']),
                  'confusion_matrix': metrics.confusion_matrix(to_export['y_test_post'], pred_test_post),
                  "RF test PRE drift accuracy": rfc.score(to_export['X_test_pre'], to_export['y_test_pre']),
                  "Random Forest Classification report PRE drift" : classification_report(to_export['y_test_pre'], pred_test_pre),
@@ -246,11 +256,10 @@ def rf_classification(to_export, cols, all_cols, filename):
                  'Random Forest feature importance': importances,
                  'F1_score_pre': score_test_pre,
                  'F1_score_post': score_test_post,
-                 'top_k_accuracy': metrics.top_k_accuracy_score(to_export['y_test_post'], pred_test_post, k=2, normalize=False) # Not normalizing gives the number of "correctly" classified samples
-
+                 'top_k_accuracy': metrics.top_k_accuracy_score(to_export['y_test_post'], pred_test_post, k=2, normalize=False), # Not normalizing gives the number of "correctly" classified samples
+                 'time': tot_time
               }
 
-    #print('saving file')
     with open('other_files/RF_METRICS_CLASSIFICATION_POST_%s.json' % filename, 'w', encoding='utf-8') as f2:
         json.dump(diz_rf_cl, f2, cls=NumpyEncoder)
     f2.close()

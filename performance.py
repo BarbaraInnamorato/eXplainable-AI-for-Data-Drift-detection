@@ -85,18 +85,17 @@ def read_files():
             #print('data dict', data_dict)
             data = {}
             for key, v in data_dict.items():
-                if 'Anchor_prediction' in v.keys() and v['swapped'] != []:
-                    predicted = v['value_ordered']
-                else:
-                    predicted = [t[0] for t in v['value_ordered']]
-
+                # if 'Anchor_prediction' in v.keys() and v['swapped'] != []:
+                #     predicted = v['value_ordered']
+                # else:
+                #     predicted = [t[0] for t in v['value_ordered']]
+                predicted = [t[0] for t in v['value_ordered']]
                 actual = get_actual(v['swapped'])
 
                 if len(predicted) == 0 or len(actual) == 0: #succede con ANCHORS
-                    break
+                    #break
+                    raise Exception('one list between predicted and actual is empty')
                 else:
-
-
                     resulting_dict = {'predicted': predicted, 'actual': actual}
                     for k in k_range:
                         resulting_dict[f"P@{k}"] = precision_k(predicted, actual, k)
@@ -106,7 +105,7 @@ def read_files():
                     data_df = pd.DataFrame.from_dict(data, orient="index")
                     data_df['result'] = 0
                     performance_df = data_df.groupby('result').agg(['mean', 'std']).T
-                    performance_df.to_excel(f'performances/ %s.xlsx'%result_name[:-5])
+                    performance_df.to_excel(f'performances/{result_name[:-5]}.xlsx')
 
 
                     # PLOT
@@ -146,16 +145,16 @@ def read_files():
                     r_color = '#DA291C'
 
                     ax.fill_between(
-                    x_values, p_high, p_low,
-                    interpolate=True, color=p_color, alpha=0.25,
-                    label="Precision Range"
-                    )
+                                x_values, p_high, p_low,
+                                interpolate=True, color=p_color, alpha=0.25,
+                                label="Precision Range"
+                                )
 
                     ax.fill_between(
-                    x_values, r_high, r_low,
-                    interpolate=True, color=r_color, alpha=0.25,
-                    label="Recall Range"
-                    )
+                                x_values, r_high, r_low,
+                                interpolate=True, color=r_color, alpha=0.25,
+                                label="Recall Range"
+                                )
                     ax.plot(x_values, p_value, color=p_color, label="Precision", lw=3)
                     ax.plot(x_values, r_value, color=r_color, label="Recall", lw=3)
                     ax.legend()

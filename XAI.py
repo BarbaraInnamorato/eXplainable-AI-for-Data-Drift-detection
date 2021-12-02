@@ -45,6 +45,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     anchor_res.append({'columns': all_cols})
 
     time_shap = []
+    time_lime = []
+    time_anchor = []
 
     for diz in data_for_xai[-1:]:
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
@@ -78,7 +80,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
         explainer_anchor = anchor_tabular.AnchorTabularExplainer(class_names=class_names,
                                                                  feature_names=all_cols,
                                                                  train_data = diz['X_train'],
-                                                                 #discretizer='quartile'
+                                                                 discretizer='quartile'
                                                                 )
 
         # Start explanations
@@ -97,23 +99,28 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             '''
             start_time_sh = time.time()
             shap_values = explainer_shap.shap_values(test_set.iloc[i, :])
-            time_shap1 = f"D3 - SHAP - Total time {filename}: {(time.time() - start_time_sh) / 60} minutes"
+            end_time_shap = (time.time() - start_time_sh) / 60
+            #time_shap1 = f"D3 - SHAP - Total time {filename}: {end_time_shap} minutes"
 
             # print(f"D3 - SHAP - Total time {filename}: {(time.time() - start_time) / 60} minutes")
-            time_shap.append({'start':start_time_sh, 'end':time_shap1, 'iter':i})
+            #time_shap.append({'start':start_time_sh, 'time':end_time_shap,'time_string': time_shap1, 'iter':i})
+            time_shap.append(end_time_shap)
             model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4) #list of probs
             class_pred = np.argmax(abs(model_output))
 
             # questo mo_output è l'output della black-box
             #mo_output = (explainer_shap.expected_value[class_pred] + shap_values[class_pred].sum()).round(4)
             #print('mo output', mo_output)
+
             zipped = list(zip(shap_values[pred], all_cols))
             ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
 
             # Get the force plot for each row
             shap.initjs()
+            fig = plt.figure()
+            fig.set_figheight(6)
             shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred],test_set.iloc[i,:], feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-            #plt.title(f'Local forceplot row {str(i)} dataset {filename}', position=(0.3, 0.7))
+            plt.title(f'Local forceplot row {str(i)} dataset {filename}', position=(0.3, 0.7))
             plt.tight_layout()
             plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
 
@@ -146,12 +153,14 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             exp_lime = explainer_lime.explain_instance(diz['X_test'][i],
                                                        diz['model'].predict_proba,
                                                        num_samples= 100,
+                                                       num_features=len(all_cols),
                                                        distance_metric='euclidean')  # provare anche una distanza diversa
 
             ###
-            time_lime1 = f"D3 - LIME - Total time: {(time.time() - start_time_lime) / 60} minutes"
-            with open('other_files/' + f"D3 - LIME - Total time {filename}", 'w', encoding='utf-8') as t2:
-                json.dump(time_lime1, t2, cls=NumpyEncoder)
+            tot_lime = time.time() - start_time_lime
+            time_lime.append(tot_lime)
+            #time_lime1 = f"D3 - LIME - Total time: {(time.time() - start_time_lime) / 60} minutes"
+
             #print(f"D3 - LIME - Total time: {(time.time() - start_time) / 60} minutes")
 
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
@@ -160,11 +169,10 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             lime_prediction = exp_lime.local_pred
             lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
             exp_lime.as_pyplot_figure().tight_layout()
-            plt.text( 0.3, 0.7,f' D3 Local LIME row {str(i)}')
+            plt.text( 0.7, 0.3,f' D3 Local LIME row {str(i)}')
             #plt.subtitle(f' D3 Local LIME row {str(i)}', y=1.05, fontsize=18)
             plt.savefig('images/' +f' D3 Local LIME row {str(i)} dataset {filename}')
-
-            #exp_lime.save_to_file(f'lime_row_{str(i)}.html') #OPTIONAL
+            #exp_lime.save_to_file(f'D3_lime_row_{str(i)}_dataset_{filename}.html') #OPTIONAL
 
             variables = []  # (name, real value)
             f_weight = []  # (feature, weight)
@@ -220,8 +228,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             """
             """
             print('SUBMODULAR PICK')
-
-
             # https://github.com/marcotcr/lime/blob/master/lime/submodular_pick.py
             sp_obj = submodular_pick.SubmodularPick(data=diz['X_train'],
                                                     explainer=explainer_lime,
@@ -281,9 +287,9 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                            threshold=0.90,
                                                            beam_size=len(all_cols))
             #print(f"D3 -ANCHOR - Total time: {(time.time() - start_time) / 60} minutes")
-            time_anchor1 = f"D3 -ANCHOR - Total time: {(time.time() - start_time_anchor) / 60} minutes"
-            with open('other_files/' + f"D3 - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t3:
-                json.dump(time_anchor1, t3, cls=NumpyEncoder)
+            #time_anchor1 = f"D3 -ANCHOR - Total time: {(time.time() - start_time_anchor) / 60} minutes"
+            end_time_a = time.time() - start_time_anchor
+            time_anchor.append(end_time_a)
 
             prediction = explainer_anchor.class_names[diz['model'].predict(diz['X_test'][i].reshape(1, -1))[0]]
 
@@ -368,12 +374,13 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
         k += 1
 
-    # print()
-    # print('D3 ANCHORS')
-    # print(anchor_res)
-
-    print('LIME')
-    print(lime_res)
+    mean_time_shap = np.mean(time_shap)
+    mean_time_lime = np.mean(time_lime)
+    mean_time_anchor = np.mean(time_anchor)
+    index = ['mean_time_shap', 'mean_time_lime', 'mean_time_anchor']
+    means = [mean_time_shap, mean_time_lime, mean_time_anchor]
+    to_export = pd.DataFrame(means, columns=['mean time'], index=index)
+    to_export.to_excel(f'other_files/D3 {filename}.xlsx')
 
     # D3 FILES
     with open('results/' + 'D3_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:
@@ -383,11 +390,16 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
         json.dump(lime_res, f1, cls=NumpyEncoder)
 
     with open('other_files/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
-    #with open('results/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
 
     with open('other_files/' + f"D3 - SHAP - Total time {filename}", 'w', encoding='utf-8') as t1:
         json.dump(time_shap, t1, cls=NumpyEncoder)
+
+    with open('other_files/' + f"D3 - LIME - Total time {filename}", 'w', encoding='utf-8') as t2:
+        json.dump(time_lime, t2, cls=NumpyEncoder)
+
+    with open('other_files/' + f"D3 - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t3:
+        json.dump(time_anchor, t3, cls=NumpyEncoder)
     #return ret, anchor_res, lime_res
 
     f.close()
@@ -406,7 +418,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     cols : swapped columns
     all_cols : all columns
     '''
+
     k = 0
+
     ret_st = []
     ret_st.append({'swapped columns': cols})
     ret_st.append({'columns': all_cols})
@@ -419,8 +433,12 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     anchor_res_st.append({'swapped columns': cols})
     anchor_res_st.append({'columns': all_cols})
 
+    time_shap = []
+    time_lime = []
+    time_anchor = []
+
     for diz in data_for_xai:
-        print('---- ST ------')
+        #print('---- ST ------')
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
         test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
 
@@ -463,10 +481,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         '''
         start_time = time.time()
         shap_values = explainer_shap.shap_values(test_set) # test set è una riga
-        #print(f"-ST -SHAP Total time {filename}: {(time.time() - start_time) / 60} minutes")
-        time_shap2 = f"-ST -SHAP Total time {filename}: {(time.time() - start_time) / 60} minutes"
-        with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t4:
-            json.dump(time_shap2, t4, cls=NumpyEncoder)
+        end_time_shap = (time.time() - start_time) / 60
+        time_shap.append(end_time_shap)
 
         #expected_values = list(explainer_shap.expected_value)
         print(f'ST shap values {filename}', shap_values)
@@ -505,18 +521,17 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         ret_st.append(dizio)
 
         ############################### LIME ################################
-        start_time = time.time()
+        start_time_lime = time.time()
         exp_lime = explainer_lime.explain_instance(diz['X_test'][0],
                                                    diz['model'].predict_proba,
                                                    num_samples=100,
                                                    distance_metric='euclidean') # provare anche una distanza diversa
-        print('%s -ST - LIME' % filename)
-        #print(f"Total time: {(time.time() - start_time) / 60} minutes")
-        time_lime2 = f"Total time: {(time.time() - start_time) / 60} minutes"
-        with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t5:
-            json.dump(time_lime2, t5, cls=NumpyEncoder)
+        tot_lime = time.time() - start_time_lime
+        time_lime.append(tot_lime)
 
+        #time_lime2 = f"Total time: {(time.time() - start_time) / 60} minutes"
         #lime_probs = list(exp_lime.predict_proba)  # prob of being in class 0 or in class 1
+
         big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
         ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
         lime_prediction = exp_lime.local_pred
@@ -610,17 +625,17 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             kind="barh", bargap=0.5)"""
 
         ################### ANCHORS #########################################
-        start_time = time.time()
+        start_time_anch = time.time()
         exp_anchor = explainer_anchor.explain_instance(diz['X_test'][0],
                                                        diz['model'].predict,
                                                        threshold=0.90,
                                                        beam_size=len(all_cols))
 
+        end_time_a = time.time() - start_time_anch
+        time_anchor.append(end_time_a)
 
         #print(f"Total time: {(time.time() - start_time) / 60} minutes")
-        time_anchor2 = f"Total time: {(time.time() - start_time) / 60} minutes"
-        with open('other_files/' + f"ST - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t6:
-            json.dump(time_anchor2, t6, cls=NumpyEncoder)
+        #time_anchor2 = f"Total time: {(time.time() - start_time) / 60} minutes"
 
         prediction_anch = explainer_anchor.class_names[diz['model'].predict(diz['X_test'].reshape(1, -1))[0]]
 
@@ -704,8 +719,13 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         k += 1
 
-
-
+    mean_time_shap = np.mean(time_shap)
+    mean_time_lime = np.mean(time_lime)
+    mean_time_anchor = np.mean(time_anchor)
+    index = ['mean_time_shap', 'mean_time_lime', 'mean_time_anchor']
+    means = [mean_time_shap,mean_time_lime,mean_time_anchor]
+    to_export = pd.DataFrame(means, columns=['mean time'], index=index)
+    to_export.to_excel(f'other_files/ST {filename}.xlsx')
 
     # ST FILES
     with open('results/' + 'ST_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:
@@ -715,8 +735,16 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         json.dump(lime_res_st, f1, cls=NumpyEncoder)
 
     with open('other_files/' + 'ST_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as f2:
-    #with open('results/' + 'ST_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as f2:
         json.dump(anchor_res_st, f2, cls=NumpyEncoder)
+
+    with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t4:
+        json.dump(time_shap, t4, cls=NumpyEncoder)
+
+    with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t5:
+        json.dump(time_lime, t5, cls=NumpyEncoder)
+
+    with open('other_files/' + f"ST - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t6:
+        json.dump(time_anchor, t6, cls=NumpyEncoder)
 
     f.close()
     f1.close()
