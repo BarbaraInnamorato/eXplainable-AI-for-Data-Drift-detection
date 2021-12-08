@@ -50,7 +50,7 @@ def read_data_weather(foldername="data/weather/", shuffle=False):
 
     df = df_data.copy()
     df['y'] = y
-    df.columns = ['TEMP', 'DEWP', 'SLP', 'VISIB', 'WDSP', 'MXSPD', 'MAX', 'MIN', 'PRCP']
+    df.columns = ['TEMP', 'DEWP', 'SLP', 'VISIB', 'WDSP', 'MXSPD', 'MAX', 'MIN', 'PRC']
 
     if shuffle is True:
         df = df.sample(frac=1)
@@ -81,6 +81,7 @@ def read_data_forest_cover_type(foldername="data/", shuffle=False):
     if shuffle is True:
         df = df.sample(frac=1)
     X = df.iloc[:, 1:12]
+    print('forest cover columns',X.columns)
     y = df.iloc[:, -1:].values.flatten()
 
     # Pearson correlation

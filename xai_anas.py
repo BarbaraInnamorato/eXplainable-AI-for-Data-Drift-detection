@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpyencoder import NumpyEncoder
 
+import pprint
+
 import pandas as pd
 import json
 import time
@@ -328,7 +330,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         ret_st.append({'columns': all_cols})
 
         lime_res_st = []
-        lime_res_st.append('swapped columns %s' % cols)
+        lime_res_st.append({'swapped columns': cols})
         lime_res_st.append({'columns': all_cols})
 
         anchor_res_st = []
@@ -341,7 +343,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         for diz in data_for_xai:
             #print('---- ST ------')
-
+            print('diz')
+            print( diz )
             train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
             test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
 
@@ -349,11 +352,12 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             #train_sample = shap.sample(train_set, nsamples=100, random_state=0),  # se no train_set
 
             # Setting explainers
+
             explainer_shap = shap.KernelExplainer(diz['model'].predict,
-                                                  train_set,
-                                                  #shap.sample(train_set, nsamples=100, random_state=90),
-                                                  nsamples=100,
-                                                  random_state=90,
+                                                  #train_set,
+                                                  shap.sample(train_set, nsamples=100, random_state=90),
+                                                  #nsamples=100,
+                                                  #random_state=90,
                                                   link = 'identity',
                                                   l1_reg = len(all_cols)
                                                   )
@@ -384,7 +388,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             '''
 
             start_time_s = time.time()
+            print('ST SHAP sto calcolando shap values')
             shap_values = explainer_shap.shap_values(test_set,  nsamples=100)  # test set è una riga
+            print('ST ANAS SHAP VALUES', shap_values)
             end_time_shap = (time.time() - start_time_s) / 60
             time_shap.append(end_time_shap)
 
@@ -397,13 +403,14 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             # Get the force plot for each row
             shap.initjs()
             shap.plots.force(explainer_shap.expected_value, shap_values, test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-            plt.title(f'Local Force plot row {str(k)}')
+            #plt.title(f'Local Force plot row {str(k)}')
             plt.tight_layout()
             plt.savefig('images/'+ f'ST Local forceplot row {str(k)} dataset {filename}')
 
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
             model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # list of probs
+
             print('ST model output anas', model_output)
             class_pred = np.argmax(abs(model_output))
 
@@ -429,7 +436,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             tot_lime = time.time() - start_time_lime
             time_lime.append(tot_lime)
             #st_time_lime1 = f"- ST - LIME Total time {filename}: {(time.time() - start_time_lime) / 60} minutes"
-
 
             lime_prediction = exp_lime.local_pred
             exp_lime.as_pyplot_figure().tight_layout()

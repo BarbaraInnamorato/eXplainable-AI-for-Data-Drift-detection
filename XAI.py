@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore")
+
 import shap
 import lime
 import lime.lime_tabular
@@ -77,11 +80,16 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                                 discretizer='quartile',
                                                                 verbose=True)
 
-        explainer_anchor = anchor_tabular.AnchorTabularExplainer(class_names=class_names,
-                                                                 feature_names=all_cols,
-                                                                 train_data = diz['X_train'],
-                                                                 discretizer='quartile'
-                                                                )
+        import alibi
+        from alibi.explainers import AnchorTabular
+        predict_fn = lambda x:diz['model'].predict(x)
+        explainer_anchor = AnchorTabular(predict_fn, all_cols)
+        explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
+        # explainer_anchor = anchor_tabular.AnchorTabularExplainer(class_names=class_names,
+        #                                                          feature_names=all_cols,
+        #                                                          train_data = diz['X_train'],
+        #                                                          #discretizer='quartile'
+        #                                                         )
 
         # Start explanations
 
@@ -89,7 +97,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             pred = diz['predictions'][i]
             predict_proba = diz['model'].predict_proba(diz['X_test'][i].reshape(1, -1))[0]
 
-
+            """
             #############################  SHAP  ##############################
             '''
             - le variabili con shap value negativo dovrebbero essere quelle che spingono verso zero 
@@ -107,6 +115,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             time_shap.append(end_time_shap)
             model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4) #list of probs
             class_pred = np.argmax(abs(model_output))
+            print(f'model output {filename}', model_output)
 
             # questo mo_output è l'output della black-box
             #mo_output = (explainer_shap.expected_value[class_pred] + shap_values[class_pred].sum()).round(4)
@@ -140,7 +149,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'shap_values': shap_values
             }}}
             ret.append(dizio)
-
+            """
 
             #############################  LIME  ###########################
             '''
@@ -282,16 +291,45 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             '''
 
             start_time_anchor = time.time()
-            exp_anchor = explainer_anchor.explain_instance(diz['X_test'][i],
-                                                           diz['model'].predict,
-                                                           threshold=0.90,
-                                                           beam_size=len(all_cols))
+            class_list_str = ['0', '1']
+            pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][i].reshape(1, -1))[0]]
+            print('ALIBI PREDICTION', pred_uno)
+
+            exp_anchor = explainer_anchor.explain(diz['X_test'][i],
+                                                  threshold=0.90,
+                                                  beam_size=len(all_cols),
+                                                  coverage_samples=1000)
+            print('ALIBI EXPLANATION', exp_anchor)
+
+            rules = exp_anchor.anchor
+            print('RULES', rules)
+            precision = exp_anchor.precision
+            coverage = exp_anchor.coverage
+
+            """
+            # exp_anchor = explainer_anchor.explain_instance(diz['X_test'][i],
+            #                                                diz['model'].predict,
+            #                                                threshold=0.70,
+            #                                                delta = 0.1,
+            #                                                tau = 0.05,
+            #                                                batch_size = 100,
+            #                                                coverage_samples = 2000,
+            #                                                beam_size=len(all_cols))
             #print(f"D3 -ANCHOR - Total time: {(time.time() - start_time) / 60} minutes")
             #time_anchor1 = f"D3 -ANCHOR - Total time: {(time.time() - start_time_anchor) / 60} minutes"
             end_time_a = time.time() - start_time_anchor
             time_anchor.append(end_time_a)
 
+            #names to exp
+            try:
+                names_to_exp = explainer_anchor.add_names_to_exp(diz['X_test'][i])
+                print('names_to_exp', names_to_exp)
+            except:
+                print("An exception occurred")
+                #continue
+
             prediction = explainer_anchor.class_names[diz['model'].predict(diz['X_test'][i].reshape(1, -1))[0]]
+            print('ANCHOR PREDICTION', prediction)
 
             # exp_anchor.show_in_notebook()
             # exp_anchor.examples(only_different_prediction = True)
@@ -301,17 +339,21 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             precision = round(exp_anchor.precision(), 3)
             coverage = round(exp_anchor.coverage(), 3)
 
-            '''
+
             print()
             print('anchor: %s' % (' AND '.join(exp_anchor.names())))
             print('precision: %.2f' % exp_anchor.precision())
             print('coverage: %.2f' % exp_anchor.coverage())
-
+            
+            '''
             # Get test examples where the anchora applies
             fit_anchor = np.where(np.all(diz['X_test'][i:, exp_anchor.features()] == diz['X_test'][i][exp_anchor.features()], axis=1))[0]
             print('Anchor test precision: %.2f' % (np.mean(diz['model'].predict(diz['X_test'][fit_anchor]) == diz['model'].predict(diz['X_test'][i].reshape(1, -1)))))
             print('Anchor test coverage: %.2f' % (fit_anchor.shape[0] / float(test_set.shape[0])))    
             print()'''
+            """
+
+
 
             contrib = []
             swapped = []
@@ -362,8 +404,10 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'class_names': class_names,
                 'd3_prediction': pred,
                 'd3_pred_probs': predict_proba,
-                'Anchor_prediction': prediction,
-                'rule': ' AND '.join(exp_anchor.names()),
+                #'Anchor_prediction': prediction,
+                'Anchor_prediction': pred_uno,
+                #'rule': ' AND '.join(exp_anchor.names()),
+                'rule': ' AND '.join(exp_anchor.anchor),
                 'precision': precision,
                 'coverage': coverage,
                 'swapped': swapped,
@@ -373,6 +417,9 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             anchor_res.append(diz_anchors)
 
         k += 1
+
+    print('anchors')
+    print(anchor_res)
 
     mean_time_shap = np.mean(time_shap)
     mean_time_lime = np.mean(time_lime)
@@ -389,7 +436,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     with open('results/' + 'D3_LIME_%s.json' % filename, 'w', encoding='utf-8') as f1:
         json.dump(lime_res, f1, cls=NumpyEncoder)
 
-    with open('other_files/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
+    with open('results/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
 
     with open('other_files/' + f"D3 - SHAP - Total time {filename}", 'w', encoding='utf-8') as t1:
@@ -498,8 +545,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         # Get the force plot for each row
         shap.initjs()
         shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred], test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-        #plt.title('Local Force plot row %s'%k)
-        name = f'ST Local Force plot row {str(k)}, dataset {filename}'
+        name = f'ST Local SHAP row {str(k)}, dataset {filename}'
+        plt.title(f'Local forceplot row {str(k)} dataset {filename}', position=(0.3, 0.7))
         plt.tight_layout()
         plt.savefig('images/'+ name)
 

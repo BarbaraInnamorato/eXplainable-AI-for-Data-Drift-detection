@@ -229,7 +229,7 @@ def rf_classification(to_export, cols, all_cols, filename):
 
     fig = plt.figure(constrained_layout=True)
     shap.summary_plot(shap_values, to_export['X_test_post'], feature_names=all_cols,plot_type = 'bar', show=False)
-    fig.title(f'RF SHAP summary plot DOT {filename}')
+    plt.title(f'RF SHAP summary plot DOT {filename}')
     fig.tight_layout()
     fig.savefig('images/RF_BAR_Summary_plot_%s' % filename)
 

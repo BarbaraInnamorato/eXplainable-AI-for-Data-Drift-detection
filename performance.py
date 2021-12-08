@@ -85,11 +85,11 @@ def read_files():
             #print('data dict', data_dict)
             data = {}
             for key, v in data_dict.items():
-                # if 'Anchor_prediction' in v.keys() and v['swapped'] != []:
-                #     predicted = v['value_ordered']
-                # else:
-                #     predicted = [t[0] for t in v['value_ordered']]
-                predicted = [t[0] for t in v['value_ordered']]
+                if 'Anchor_prediction' in v.keys() and v['swapped'] != []:
+                    predicted = v['value_ordered']
+                else:
+                    predicted = [t[0] for t in v['value_ordered']]
+                #predicted = [t[0] for t in v['value_ordered']]
                 actual = get_actual(v['swapped'])
 
                 if len(predicted) == 0 or len(actual) == 0: #succede con ANCHORS
