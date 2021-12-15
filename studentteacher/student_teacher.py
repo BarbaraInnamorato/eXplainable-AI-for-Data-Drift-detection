@@ -149,6 +149,9 @@ def teacher_student_inference(drift_point, train_results):
                     'y_train': y_train,
                     'X_test': Xi,
                     'y_test': yi,
+                    'student_error': student_error, #tra 0 e 1
+                    'drifted': True,
+                    'indice_riga': i,
                     'y hat student': y_hat_student,
                     'y_hat_teacher': y_hat_teacher,
                     'class_names': class_names,

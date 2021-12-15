@@ -20,7 +20,7 @@ matplotlib.use('Agg')
 first_time = time.time()
 
 
-def rf_regression(to_export, cols, all_cols, filename):
+def rf_regression(to_export,  all_cols, filename):
     print('************** RF, REGRESSION for dataset %s' %filename)
     #rfc = RandomForestRegressor(criterion= ' squared_error', max_features=int(np.sqrt(len(all_cols))))
     rfc = RandomForestRegressor(max_features=int(np.sqrt(len(all_cols))))
@@ -121,7 +121,7 @@ def rf_regression(to_export, cols, all_cols, filename):
     f1.close()
 
 
-def rf_classification(to_export, cols, all_cols, filename):
+def rf_classification(to_export, all_cols, filename):
     rfc = RandomForestClassifier(max_features=int(np.sqrt(len(all_cols))))
     """
     RandomForestClassifier : criterion= ' gini',  boostrap = True, oob = True #default args

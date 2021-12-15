@@ -4,9 +4,12 @@ warnings.filterwarnings("ignore")
 import shap
 import lime
 import lime.lime_tabular
-from lime import submodular_pick
+#from anchor import anchor_tabular
+#from lime import submodular_pick
 
-from anchor import anchor_tabular
+#import alibi
+from alibi.explainers import AnchorTabular
+
 import matplotlib.pyplot as plt
 import numpy as np
 from numpyencoder import NumpyEncoder
@@ -14,8 +17,6 @@ from numpyencoder import NumpyEncoder
 import pandas as pd
 import json
 import time
-
-from collections import defaultdict
 
 
 # Connect pandas with plotly
@@ -26,6 +27,7 @@ init_notebook_mode(connected='true')
 
 
 first_time = time.time() # returns the processor time
+
 
 def d3_xai(data_for_xai, cols, all_cols, filename):
     '''
@@ -68,7 +70,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                               train_set,
                                               nsamples=100,
                                               random_state=90,
-                                              link='identity',
+                                              link='logit',
                                               l1_reg=len(all_cols)
                                               )
 
@@ -80,8 +82,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                                 discretizer='quartile',
                                                                 verbose=True)
 
-        import alibi
-        from alibi.explainers import AnchorTabular
+
         predict_fn = lambda x:diz['model'].predict(x)
         explainer_anchor = AnchorTabular(predict_fn, all_cols)
         explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
@@ -97,7 +98,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             pred = diz['predictions'][i]
             predict_proba = diz['model'].predict_proba(diz['X_test'][i].reshape(1, -1))[0]
 
-            """
+
             #############################  SHAP  ##############################
             '''
             - le variabili con shap value negativo dovrebbero essere quelle che spingono verso zero 
@@ -115,7 +116,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             time_shap.append(end_time_shap)
             model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4) #list of probs
             class_pred = np.argmax(abs(model_output))
-            print(f'model output {filename}', model_output)
+            print(f'SHAP model output {filename}', model_output)
+            print(f'SHAP VALUES {filename}', shap_values)
 
             # questo mo_output è l'output della black-box
             #mo_output = (explainer_shap.expected_value[class_pred] + shap_values[class_pred].sum()).round(4)
@@ -129,7 +131,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             fig = plt.figure()
             fig.set_figheight(6)
             shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred],test_set.iloc[i,:], feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-            plt.title(f'Local forceplot row {str(i)} dataset {filename}', position=(0.3, 0.7))
+            #plt.title(f'Local forceplot row {str(i)} dataset {filename}', position=(0.3, 0.7))
             plt.tight_layout()
             plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
 
@@ -149,7 +151,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'shap_values': shap_values
             }}}
             ret.append(dizio)
-            """
+
 
             #############################  LIME  ###########################
             '''
@@ -169,7 +171,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             tot_lime = time.time() - start_time_lime
             time_lime.append(tot_lime)
             #time_lime1 = f"D3 - LIME - Total time: {(time.time() - start_time_lime) / 60} minutes"
-
             #print(f"D3 - LIME - Total time: {(time.time() - start_time) / 60} minutes")
 
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
@@ -178,10 +179,10 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             lime_prediction = exp_lime.local_pred
             lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
             exp_lime.as_pyplot_figure().tight_layout()
-            plt.text( 0.7, 0.3,f' D3 Local LIME row {str(i)}')
+            #plt.text( 0.7, 0.3,f' D3 Local LIME row {str(i)}')
             #plt.subtitle(f' D3 Local LIME row {str(i)}', y=1.05, fontsize=18)
             plt.savefig('images/' +f' D3 Local LIME row {str(i)} dataset {filename}')
-            #exp_lime.save_to_file(f'D3_lime_row_{str(i)}_dataset_{filename}.html') #OPTIONAL
+            exp_lime.save_to_file(f'D3_lime_row_{str(i)}_dataset_{filename}.html')
 
             variables = []  # (name, real value)
             f_weight = []  # (feature, weight)
@@ -299,6 +300,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                   threshold=0.90,
                                                   beam_size=len(all_cols),
                                                   coverage_samples=1000)
+            end_time_a = time.time() - start_time_anchor
+            time_anchor.append(end_time_a)
             print('ALIBI EXPLANATION', exp_anchor)
 
             rules = exp_anchor.anchor
@@ -352,8 +355,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             print('Anchor test coverage: %.2f' % (fit_anchor.shape[0] / float(test_set.shape[0])))    
             print()'''
             """
-
-
 
             contrib = []
             swapped = []
@@ -439,28 +440,28 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     with open('results/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
 
-    with open('other_files/' + f"D3 - SHAP - Total time {filename}", 'w', encoding='utf-8') as t1:
-        json.dump(time_shap, t1, cls=NumpyEncoder)
-
-    with open('other_files/' + f"D3 - LIME - Total time {filename}", 'w', encoding='utf-8') as t2:
-        json.dump(time_lime, t2, cls=NumpyEncoder)
-
-    with open('other_files/' + f"D3 - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t3:
-        json.dump(time_anchor, t3, cls=NumpyEncoder)
+    # with open('other_files/' + f"D3 - SHAP - Total time {filename}", 'w', encoding='utf-8') as t1:
+    #     json.dump(time_shap, t1, cls=NumpyEncoder)
+    #
+    # with open('other_files/' + f"D3 - LIME - Total time {filename}", 'w', encoding='utf-8') as t2:
+    #     json.dump(time_lime, t2, cls=NumpyEncoder)
+    #
+    # with open('other_files/' + f"D3 - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t3:
+    #     json.dump(time_anchor, t3, cls=NumpyEncoder)
     #return ret, anchor_res, lime_res
 
     f.close()
     f1.close()
     ff2.close()
-    t1.close()
-    t2.close()
-    t3.close()
+    # t1.close()
+    # t2.close()
+    # t3.close()
 
 
 
 def st_xai(data_for_xai, cols, all_cols, filename):
     '''
-        Function for xai methods with student-teacher approach
+    Function for xai methods with student-teacher approach
 
     cols : swapped columns
     all_cols : all columns
@@ -492,9 +493,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         class_names = np.unique(diz['y_train'])
 
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
-                                              train_set,
-                                              nsamples=100,
-                                              random_state=90,
+                                              shap.sample(train_set, nsamples=100, random_state=90),
                                               link='identity',
                                               l1_reg = len(all_cols)
                                               )
@@ -506,14 +505,17 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                 feature_selection='none',
                                                                 discretize_continuous=True,
                                                                 discretizer='quartile',
-                                                                verbose=False)
+                                                                verbose=True)
 
-        explainer_anchor = anchor_tabular.AnchorTabularExplainer(class_names = class_names,
-                                                                 feature_names=all_cols,
-                                                                 train_data=diz['X_train'],
-                                                                 #discretizer='quartile'
-                                                                )
+        # explainer_anchor = anchor_tabular.AnchorTabularExplainer(class_names = class_names,
+        #                                                          feature_names=all_cols,
+        #                                                          train_data=diz['X_train'],
+        #                                                          #discretizer='quartile'
+        #                                                         )
 
+        predict_fn = lambda x: diz['model'].predict(x)
+        explainer_anchor = AnchorTabular(predict_fn, all_cols)
+        explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
 
         pred = int(diz['class_student'])
         predict_proba = diz['model'].predict_proba(diz['X_test'][0].reshape(1, -1))[0]  # default: l2 penalty = ridge regression
@@ -527,7 +529,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         '''
         start_time = time.time()
+        print('ST SHAP sto calcolando shap values')
         shap_values = explainer_shap.shap_values(test_set) # test set è una riga
+        print(f'ST {filename} SHAP VALUES', shap_values)
         end_time_shap = (time.time() - start_time) / 60
         time_shap.append(end_time_shap)
 
@@ -585,7 +589,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
         exp_lime.as_pyplot_figure().tight_layout()
         plt.text(0.3, 0.7, f' D3 Local LIME row {str(k)}')
+        #plt.tight_layout()
         plt.savefig('images/' + f' ST Local LIME row {str(k)} dataset {filename}')
+        exp_lime.save_to_file(f'ST_lime_row_{str(k)}_dataset_{filename}.html')
 
         variables = []  # (name, real value)
         f_weight = []  # (feature, weight)
@@ -673,6 +679,25 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         ################### ANCHORS #########################################
         start_time_anch = time.time()
+        class_list_str = ['0', '1']
+        pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][k].reshape(1, -1))[0]]
+        print('ALIBI PREDICTION', pred_uno)
+
+        exp_anchor = explainer_anchor.explain(diz['X_test'][k],
+                                              threshold=0.90,
+                                              beam_size=len(all_cols),
+                                              coverage_samples=1000)
+        end_time_a = time.time() - start_time_anch
+        time_anchor.append(end_time_a)
+        print('ALIBI EXPLANATION', exp_anchor)
+
+        rules = exp_anchor.anchor
+        print('RULES', rules)
+        precision = exp_anchor.precision
+        coverage = exp_anchor.coverage
+
+
+        """
         exp_anchor = explainer_anchor.explain_instance(diz['X_test'][0],
                                                        diz['model'].predict,
                                                        threshold=0.90,
@@ -705,7 +730,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         print('Anchor test precision: %.2f' % (np.mean(diz['model'].predict(diz['X_test'][fit_anchor]) == diz['model'].predict(diz['X_test'][i].reshape(1, -1)))))
         print('Anchor test coverage: %.2f' % (fit_anchor.shape[0] / float(test_set.shape[0])))    
         print()'''
-
+        """
         contrib = []
         swapped = []
 
@@ -754,8 +779,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             'class_names': class_names,
             'ML_prediction': pred,                       # ST prediction
             'ML_pred_probs': predict_proba,              # ST predicted proba
-            'Anchor_prediction': prediction_anch,        # xai prediction
-            'rule': ' AND '.join(exp_anchor.names()),    # anchor
+            #'Anchor_prediction': prediction_anch,        # xai prediction
+            'Anchor_prediction': pred_uno,
+            #'rule': ' AND '.join(exp_anchor.names()),    # anchor
+            'rule': ' AND '.join(exp_anchor.anchor),
             'precision': precision,
             'coverage': coverage,
             'swapped': swapped,                          # (feature, bool)
@@ -784,21 +811,21 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     with open('other_files/' + 'ST_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as f2:
         json.dump(anchor_res_st, f2, cls=NumpyEncoder)
 
-    with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t4:
-        json.dump(time_shap, t4, cls=NumpyEncoder)
-
-    with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t5:
-        json.dump(time_lime, t5, cls=NumpyEncoder)
-
-    with open('other_files/' + f"ST - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t6:
-        json.dump(time_anchor, t6, cls=NumpyEncoder)
+    # with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t4:
+    #     json.dump(time_shap, t4, cls=NumpyEncoder)
+    #
+    # with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t5:
+    #     json.dump(time_lime, t5, cls=NumpyEncoder)
+    #
+    # with open('other_files/' + f"ST - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t6:
+    #     json.dump(time_anchor, t6, cls=NumpyEncoder)
 
     f.close()
     f1.close()
     f2.close()
-    t4.close()
-    t5.close()
-    t6.close()
+    # t4.close()
+    # t5.close()
+    # t6.close()
 
     #return ret, lime_res, anchor_res
 

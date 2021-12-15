@@ -58,7 +58,7 @@ ecc...
 
 def read_files():
     path_to_json = 'results/'
-    directory = r'C:\Users\binnamorato\PycharmProjects\TESI_BARBARA\results'
+    directory = r'C:\Users\binnamorato\PycharmProjects\XAI\results'
     folder = [pos_json for pos_json in os.listdir(directory) if pos_json.endswith('.json')]
 
     for index, js in enumerate(folder):
@@ -94,7 +94,9 @@ def read_files():
 
                 if len(predicted) == 0 or len(actual) == 0: #succede con ANCHORS
                     #break
-                    raise Exception('one list between predicted and actual is empty')
+                    #raise Exception('one list between predicted and actual is empty')
+                    print('WARNING: one list between predicted and actual is empty')
+                    continue
                 else:
                     resulting_dict = {'predicted': predicted, 'actual': actual}
                     for k in k_range:
