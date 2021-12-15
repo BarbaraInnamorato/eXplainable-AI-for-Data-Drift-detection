@@ -485,6 +485,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             lime_res_st.append(lime_diz)
 
             ################### ANCHORS #########################################
+            """
             start_time_anch = time.time()
             class_list_str = ['0', '1']
             #pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][k].reshape(1, -1))[0]]
@@ -510,7 +511,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
             #prediction_anch = diz['model'].predict(diz['X_test'].reshape(1, -1))[0]
 
-            """
+            
             # exp_anchor.show_in_notebook()
             # exp_anchor.examples(only_different_prediction = True)
             # print('esempi',exp_anchor.examples()) #np.ndarray
@@ -519,7 +520,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             precision = round(exp_anchor.precision(), 3)
             coverage = round(exp_anchor.coverage(), 3)
 
-            '''
+            
             print()
             print('anchor: %s' % (' AND '.join(exp_anchor.names())))
             print('precision: %.2f' % exp_anchor.precision())
@@ -529,8 +530,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             fit_anchor = np.where(np.all(diz['X_test'][i:, exp_anchor.features()] == diz['X_test'][i][exp_anchor.features()], axis=1))[0]
             print('Anchor test precision: %.2f' % (np.mean(diz['model'].predict(diz['X_test'][fit_anchor]) == diz['model'].predict(diz['X_test'][i].reshape(1, -1)))))
             print('Anchor test coverage: %.2f' % (fit_anchor.shape[0] / float(test_set.shape[0])))    
-            print()'''
-            """
+            print()
+            
 
             contrib = []
             swapped = []
@@ -588,6 +589,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             }}}
 
             anchor_res_st.append(diz_anchors)
+            """
 
             k += 1
 
@@ -598,8 +600,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         with open('results/' + 'ST_LIME_%s.json' % filename, 'w', encoding='utf-8') as f11:
             json.dump(lime_res_st, f11, cls=NumpyEncoder)
 
-        with open('results/' + 'ST_ANCHOR_REGRESSION_%s.json' % filename, 'w', encoding='utf-8') as f12:
-            json.dump(anchor_res_st, f12, cls=NumpyEncoder)
+        #with open('results/' + 'ST_ANCHOR_REGRESSION_%s.json' % filename, 'w', encoding='utf-8') as f12:
+        #    json.dump(anchor_res_st, f12, cls=NumpyEncoder)
 
         with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t9:
             json.dump(time_shap, t9, cls=NumpyEncoder)
@@ -607,8 +609,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t10:
             json.dump(time_lime, t10, cls=NumpyEncoder)
 
-        with open('other_files/' + f"ST - ANCHORS - Total time {filename}", 'w', encoding='utf-8') as t11:
-            json.dump(time_anchor, t11, cls=NumpyEncoder)
+        # with open('other_files/' + f"ST - ANCHORS - Total time {filename}", 'w', encoding='utf-8') as t11:
+        #    json.dump(time_anchor, t11, cls=NumpyEncoder)
 
         mean_time_shap = np.mean(time_shap)
         mean_time_lime = np.mean(time_lime)
@@ -620,10 +622,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         f.close()
         f11.close()
-        f12.close()
+        #f12.close()
         t9.close()
         t10.close()
-        t11.close()
+        #t11.close()
 
         #return ret, lime_res, anchor_res
 
