@@ -117,7 +117,7 @@ def faicose_un_dataset(dataset_name):
         anas_d3 = anas_results['d3'][0]
         XAI.d3_xai(anas_d3, cols_to_print, all_cols, dataset_name)
         st_anas.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
-        SP_LIME.sp_lime(anas_d3, cols_to_print, all_cols, dataset_name)
+        SP_LIME.sp_lime(anas_d3, all_cols, dataset_name)
 
     else:
         st = inf_results['student-teacher'][0]
