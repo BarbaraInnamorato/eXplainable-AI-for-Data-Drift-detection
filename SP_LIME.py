@@ -51,14 +51,14 @@ def sp_lime(data_for_xai,  all_cols, filename):
 
         df = pd.DataFrame({})
         for this_label in range(len(class_names)):
-            print('this_label', this_label)
+            #print('this_label', this_label)
             dfl = []
             for i, exp in enumerate(sp_obj.sp_explanations):
                 exp.as_pyplot_figure().savefig(f'LIME global for {filename} {str(i)}');
                 l = exp.as_list(label=this_label)
                 l.append(("exp number", i))
                 dfl.append(dict(l))
-                print('dfl', dfl)
+                #print('dfl', dfl)
             # dftest=pd.DataFrame(dfl)
             df = df.append(
                 pd.DataFrame(dfl, index=[class_names[this_label] for i in range(len(sp_obj.sp_explanations))]))
