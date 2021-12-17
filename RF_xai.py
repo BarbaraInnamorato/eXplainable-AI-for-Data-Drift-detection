@@ -208,7 +208,11 @@ def rf_classification(to_export, all_cols, filename):
 
     # Global explanation for the performance of RANDOM FOREST
     #print('faccio explainer')
-    sample_train = shap.sample(to_export['X_train'],nsamples=100, random_state=90)
+
+
+
+
+    sample_train = shap.sample(to_export['X_train'],nsamples=10, random_state=90) # nsamples=100
     explainer = shap.KernelExplainer(rfc.predict_proba,
                                      sample_train,
                                      feature_names=all_cols,
@@ -229,11 +233,10 @@ def rf_classification(to_export, all_cols, filename):
     fig.tight_layout()
     fig.savefig('images/RF_BAR_Summary_plot_%s' % filename)
 
-    # Make plot. Index of [1] arbitrary because 1 = concept drift
-    shap.summary_plot(shap_values[1], to_export['X_test_post'], feature_names=all_cols, plot_type = 'dot',show=False)
-    plt.title(f'RF SHAP summary plot DOT {filename}')
-    plt.tight_layout()
-    plt.savefig('images/RF_BARSummary_plot_%s' % filename)
+    # shap.summary_plot(shap_values[1], to_export['X_test_post'], feature_names=all_cols, plot_type = 'dot',show=False)
+    # plt.title(f'RF SHAP summary plot DOT {filename}')
+    # plt.tight_layout()
+    # plt.savefig('images/RF_BAR_Summary_plot_%s' % filename)
 
     #print('Compute accuracy metrics for random forest classification')
     diz_rf_cl = {"shap prediction": class_pred,
@@ -246,7 +249,7 @@ def rf_classification(to_export, all_cols, filename):
                  'Random Forest feature importance': importances,
                  'F1_score_pre': score_test_pre,
                  'F1_score_post': score_test_post,
-                 'top_k_accuracy': metrics.top_k_accuracy_score(to_export['y_test_post'], pred_test_post, k=2, normalize=False), # Not normalizing gives the number of "correctly" classified samples
+                # 'top_k_accuracy': metrics.top_k_accuracy_score(to_export['y_test_post'], pred_test_post, k=2, normalize=False) # Not normalizing gives the number of "correctly" classified samples
                  'time': tot_time
               }
 

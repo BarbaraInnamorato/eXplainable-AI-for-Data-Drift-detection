@@ -70,7 +70,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                               train_set,
                                               nsamples=100,
                                               random_state=90,
-                                              link='logit',
+                                              link='identity',
                                               l1_reg=len(all_cols)
                                               )
 
@@ -124,7 +124,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             shap.initjs()
             fig = plt.figure()
             fig.set_figheight(6)
-            shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred],test_set.iloc[i,:], feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
+            shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred],test_set.iloc[i,:], link = 'logit',feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
             #plt.title(f'Local forceplot row {str(i)} dataset {filename}', position=(0.3, 0.7))
             plt.tight_layout()
             plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
@@ -370,7 +370,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                 feature_selection='none',
                                                                 discretize_continuous=True,
                                                                 discretizer='quartile',
-                                                                verbose=True)
+                                                                verbose=True
+                                                                )
 
 
         predict_fn = lambda x: diz['model'].predict(x)
@@ -391,7 +392,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         start_time = time.time()
         print('ST SHAP sto calcolando shap values')
         shap_values = explainer_shap.shap_values(test_set) # test set è una riga
-        print(f'ST {filename} SHAP VALUES', shap_values)
         end_time_shap = (time.time() - start_time) / 60
         time_shap.append(end_time_shap)
 
@@ -408,7 +408,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         # Get the force plot for each row
         shap.initjs()
-        shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred], test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
+        shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred], test_set, link='logit', feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
         name = f'ST Local SHAP row {str(k)}, dataset {filename}'
         plt.title(f'Local SHAP row {str(k)} dataset {filename}')
         plt.tight_layout()
@@ -424,9 +424,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             'ST_pred_probs': predict_proba,             # ST prediction
             'is ML correct': class_pred == pred,
             'SHAP_prediction': class_pred,
-            'value_ordered': feat_shap_val,        # (feature, shap_value)
+            'value_ordered': feat_shap_val,             # (feature, shap_value)
             'swapped': swap_shap,                       # (feature, bool),
-            'SHAP_probs': model_output,            # xai prediction
+            'SHAP_probs': model_output,                 # xai prediction
             'shap_values' : shap_values
         }}}
         ret_st.append(dizio)

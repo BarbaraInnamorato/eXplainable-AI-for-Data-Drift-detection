@@ -40,8 +40,8 @@ if not os.path.exists('other_files'):
 
 
 # Setup
-models = ['d3', 'student-teacher']
-#models = ['d3']
+#models = ['d3', 'student-teacher']
+models = ['d3']
 
 
 n_repetitions = 1  # se lascio 1 poi devo togliere tutti i for
@@ -94,7 +94,7 @@ def faicose_un_dataset(dataset_name):
 
     inference_functions = {
         'd3': d3_inference(drift_point, train_results),
-        'student-teacher': teacher_student_inference(drift_point,train_results)
+       # 'student-teacher': teacher_student_inference(drift_point,train_results)
         }
 
     ii = 1
@@ -114,19 +114,20 @@ def faicose_un_dataset(dataset_name):
     print('Swapped columns for drift injection are', cols_to_print)
     print()
 
+
     # data for xai
     if dataset_name in ['anas']:
-        anas_st = anas_results['student-teacher'][0]
+        #anas_st = anas_results['student-teacher'][0]
         anas_d3 = anas_results['d3'][0]
         XAI.d3_xai(anas_d3, cols_to_print, all_cols, dataset_name)
-        st_anas.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
+        #st_anas.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
         SP_LIME.sp_lime(anas_d3, all_cols, dataset_name)
 
     else:
-        st = inf_results['student-teacher'][0]
+        #st = inf_results['student-teacher'][0]
         d3 = inf_results['d3'][0]
         XAI.d3_xai(d3, cols_to_print, all_cols, dataset_name)
-        XAI.st_xai(st, cols_to_print, all_cols, dataset_name)
+        #XAI.st_xai(st, cols_to_print, all_cols, dataset_name)
         SP_LIME.sp_lime(d3, all_cols, dataset_name)
 
     # Monitoring data - PERFORM RANDOM FOREST (REGRESSION/CLASSIFICATION)
@@ -157,14 +158,14 @@ def execute_main():
 
     print("Starting 'execute_main'")
     # creating processes
-    p1 = mp.Process(target=faicose_un_dataset, args=('anas',))
+    #p1 = mp.Process(target=faicose_un_dataset, args=('anas',))
     p2 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
     """
     p3 = mp.Process(target=faicose_un_dataset, args=('weather',))
     p4 = mp.Process(target=faicose_un_dataset, args=('forestcover',))"""
 
     # starting processes
-    print(p1.start())
+    #print(p1.start())
     print(p2.start())
     """
     print(p3.start())
@@ -172,7 +173,7 @@ def execute_main():
     """
 
     # process IDs
-    print("ID of process p1: {}".format(p1.pid))
+    #print("ID of process p1: {}".format(p1.pid))
     print("ID of process p2: {}".format(p2.pid))
     """
     print("ID of process p3: {}".format(p3.pid))
@@ -180,7 +181,7 @@ def execute_main():
     """
 
     # wait until processes are finished
-    p1.join()
+    #p1.join()
     p2.join()
     """    
     p3.join()
@@ -191,7 +192,7 @@ def execute_main():
     print("All processes finished execution!")
 
     # check if processes are alive
-    print("Process p1 is alive: {}".format(p1.is_alive()))
+    #print("Process p1 is alive: {}".format(p1.is_alive()))
     print("Process p2 is alive: {}".format(p2.is_alive()))
     """
     print("Process p3 is alive: {}".format(p3.is_alive()))

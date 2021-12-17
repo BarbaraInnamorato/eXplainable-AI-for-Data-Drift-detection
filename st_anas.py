@@ -358,7 +358,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                     feature_names=all_cols,
                                                                     feature_selection='none',
                                                                     discretize_continuous=True,
-                                                                    verbose=True)
+                                                                    #verbose=True
+                                                                    )
 
             predict_fn = lambda x: diz['model'].predict(x)
             explainer_anchor = AnchorTabular(predict_fn, all_cols)
@@ -394,7 +395,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
             model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # list of probs
-
             print('ST model output anas', model_output)
             class_pred = np.argmax(abs(model_output))
 

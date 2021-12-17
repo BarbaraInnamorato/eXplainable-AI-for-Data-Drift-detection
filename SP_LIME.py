@@ -27,7 +27,8 @@ def sp_lime(data_for_xai,  all_cols, filename):
                                                                 feature_selection='none',
                                                                 discretize_continuous=True,
                                                                 discretizer='quartile',
-                                                                verbose=True)
+                                                                #verbose=True
+                                                                )
 
         sp_obj = submodular_pick.SubmodularPick(data=diz['X_test'],
                                                 explainer=explainer_lime,
@@ -54,7 +55,8 @@ def sp_lime(data_for_xai,  all_cols, filename):
             #print('this_label', this_label)
             dfl = []
             for i, exp in enumerate(sp_obj.sp_explanations):
-                exp.as_pyplot_figure().savefig(f'LIME global for {filename} {str(i)}');
+                exp.as_pyplot_figure().tight_layout()
+                plt.savefig('sp_lime/' +f'SP_LIME_global_{filename}_row_{str(i)}');
                 l = exp.as_list(label=this_label)
                 l.append(("exp number", i))
                 dfl.append(dict(l))
@@ -64,4 +66,3 @@ def sp_lime(data_for_xai,  all_cols, filename):
                 pd.DataFrame(dfl, index=[class_names[this_label] for i in range(len(sp_obj.sp_explanations))]))
             df.to_excel(f'sp_lime/SP_LIME_D3_{filename}.xlsx')
 
-        print('SUBMODULAR PICK', df.head())
