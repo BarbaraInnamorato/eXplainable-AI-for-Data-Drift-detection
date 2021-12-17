@@ -22,11 +22,9 @@ first_time = time.time()
 
 def rf_regression(to_export,  all_cols, filename):
     print('************** RF, REGRESSION for dataset %s' %filename)
-    #rfc = RandomForestRegressor(criterion= ' squared_error', max_features=int(np.sqrt(len(all_cols))))
     rfc = RandomForestRegressor(max_features=int(np.sqrt(len(all_cols))))
     rfc.fit(to_export['X_train'], to_export['y_train'])
 
-    #prediction_pre = rfc.predict(to_export['X_test_pre'])
     prediction_post = rfc.predict(to_export['X_test_post'])
 
     print('FEATURE IMPORTANCE')
@@ -208,8 +206,6 @@ def rf_classification(to_export, all_cols, filename):
     plt.tight_layout()
     plt.savefig('images/'+'RF Permutation Feature Importance 2 %s' % filename)
 
-
-
     # Global explanation for the performance of RANDOM FOREST
     #print('faccio explainer')
     sample_train = shap.sample(to_export['X_train'],nsamples=100, random_state=90)
@@ -238,12 +234,6 @@ def rf_classification(to_export, all_cols, filename):
     plt.title(f'RF SHAP summary plot DOT {filename}')
     plt.tight_layout()
     plt.savefig('images/RF_BARSummary_plot_%s' % filename)
-
-    #prediction_pre = rfc.predict_proba(to_export['X_test_pre'])
-    #pred_pre = rfc.predict(to_export['X_test_pre'])
-    #prediction_post = rfc.predict_proba(to_export['X_test_post'])
-    #pred_post = rfc.predict(to_export['X_test_post'])
-
 
     #print('Compute accuracy metrics for random forest classification')
     diz_rf_cl = {"shap prediction": class_pred,

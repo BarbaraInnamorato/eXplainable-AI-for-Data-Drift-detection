@@ -1,12 +1,11 @@
 import shap
 import lime
 import lime.lime_tabular
-#from anchor import anchor_tabular
+from alibi.explainers import AnchorTabular
 import matplotlib.pyplot as plt
 import numpy as np
 from numpyencoder import NumpyEncoder
-from alibi.explainers import AnchorTabular
-from anchor import anchor_tabular
+
 
 import pandas as pd
 import json
@@ -342,13 +341,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         time_anchor = []
 
         for diz in data_for_xai:
-            #print('---- ST ------')
             train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
             test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
 
             class_names = np.unique(diz['y_train'])
-            #train_sample = shap.sample(train_set, nsamples=100, random_state=0),  # se no train_set
-
             # Setting explainers
 
             explainer_shap = shap.KernelExplainer(diz['model'].predict,
@@ -364,12 +360,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                     discretize_continuous=True,
                                                                     verbose=True)
 
-            # explainer_anchor = anchor_tabular.AnchorTabularExplainer(#predict_for_anchors,
-            #                                                          class_names=class_names,
-            #                                                          #diz['model'].predict,
-            #                                                          feature_names=all_cols,
-            #                                                          train_data=diz['X_train'],
-            #                                                          discretizer='quartile')
             predict_fn = lambda x: diz['model'].predict(x)
             explainer_anchor = AnchorTabular(predict_fn, all_cols)
             explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
@@ -392,16 +382,12 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             end_time_shap = (time.time() - start_time_s) / 60
             time_shap.append(end_time_shap)
 
-            #print(f"- ST - SHAP Total time {filename}: {(time.time() - start_time_s) / 60} minutes")
-            #st_time_shap1 = f"- ST - SHAP Total time {filename}: {(time.time() - start_time_s) / 60} minutes"
-
             zipped = list(zip(shap_values[0], all_cols))
             ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
 
             # Get the force plot for each row
             shap.initjs()
             shap.plots.force(explainer_shap.expected_value, shap_values, test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-            #plt.title(f'Local Force plot row {str(k)}')
             plt.tight_layout()
             plt.savefig('images/'+ f'ST Local forceplot row {str(k)} dataset {filename}')
 
@@ -433,13 +419,12 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                        distance_metric='euclidean')
             tot_lime = time.time() - start_time_lime
             time_lime.append(tot_lime)
-            #st_time_lime1 = f"- ST - LIME Total time {filename}: {(time.time() - start_time_lime) / 60} minutes"
 
             lime_prediction = exp_lime.local_pred
             exp_lime.as_pyplot_figure().tight_layout()
             plt.text(0.3, 0.7, f' D3 Local LIME row {str(k)}')
             plt.savefig('images/' + f' ST Local LIME row {str(k)} dataset {filename}')
-            exp_lime.save_to_file(f'ST_lime_row_{str(k)}_dataset_{filename}.html') #save_to_file('lime.html')
+            exp_lime.save_to_file('html_images/' + f'ST_lime_row_{str(k)}_dataset_{filename}.html') #save_to_file('lime.html')
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
 
@@ -470,7 +455,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                     mean_sum = round((float(tt[0]) + float(tt[-1])) / 2, 3)  # caso in cui il valore di un feature è in un range di valori
                     variables.append((tt[2], mean_sum))
 
-
             lime_diz = {'batch %s' % k: {'row %s' % k: {
                 'class_names': class_names,
                 'ST_prediction': pred,  # ST prediction
@@ -484,113 +468,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
             lime_res_st.append(lime_diz)
 
-            ################### ANCHORS #########################################
-            """
-            start_time_anch = time.time()
-            class_list_str = ['0', '1']
-            #pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][k].reshape(1, -1))[0]]
-            #print('ALIBI PREDICTION ANAS', pred_uno)
-
-            exp_anchor = explainer_anchor.explain(diz['X_test'][k],
-                                                  threshold=0.90,
-                                                  beam_size=len(all_cols),
-                                                  coverage_samples=1000)
-            print('ALIBI EXPLANATION ANAS', exp_anchor)
-
-            # exp_anchor = explainer_anchor.explain_instance(diz['X_test'][0],
-            #                                                diz['model'].predict,
-            #                                                threshold=0.90,
-            #                                                beam_size=len(all_cols))
-            end_time_a = time.time() - start_time_anch
-            time_anchor.append(end_time_a)
-
-            rules = exp_anchor.anchor
-            print('RULES', rules)
-            precision = exp_anchor.precision
-            coverage = exp_anchor.coverage
-
-            #prediction_anch = diz['model'].predict(diz['X_test'].reshape(1, -1))[0]
-
-            
-            # exp_anchor.show_in_notebook()
-            # exp_anchor.examples(only_different_prediction = True)
-            # print('esempi',exp_anchor.examples()) #np.ndarray
-
-            rules = exp_anchor.names()
-            precision = round(exp_anchor.precision(), 3)
-            coverage = round(exp_anchor.coverage(), 3)
-
-            
-            print()
-            print('anchor: %s' % (' AND '.join(exp_anchor.names())))
-            print('precision: %.2f' % exp_anchor.precision())
-            print('coverage: %.2f' % exp_anchor.coverage())
-
-            # Get test examples where the anchora applies
-            fit_anchor = np.where(np.all(diz['X_test'][i:, exp_anchor.features()] == diz['X_test'][i][exp_anchor.features()], axis=1))[0]
-            print('Anchor test precision: %.2f' % (np.mean(diz['model'].predict(diz['X_test'][fit_anchor]) == diz['model'].predict(diz['X_test'][i].reshape(1, -1)))))
-            print('Anchor test coverage: %.2f' % (fit_anchor.shape[0] / float(test_set.shape[0])))    
-            print()
-            
-
-            contrib = []
-            swapped = []
-
-            if len(rules) == 0:
-                if len(contrib) > 0:
-                    contrib.append(contrib[-1])
-                else:
-                    contrib.append(
-                        'empty rule: all neighbors have the same label')  # al primo batch potrebbe essere vuoto
-
-
-            else:
-                for s in rules:                 # nel caso in cui ci siano più predicati
-                    splittato = s.split(' ')    # splittato = [nswprice, >, 0.08], [0.3 <= feature <= 0.6]
-                    n = len(splittato)
-
-                    if n == 3:  # 1 feature: caso tipo [feature <= 0.5]
-                        contrib.append(splittato[0])
-                        if splittato[0] in cols:
-                            swapped.append((splittato[0], True))
-                        else:
-                            swapped.append((splittato[0], False))
-                    if n > 3:  # more than 1 feature: caso tipo rules = ['nswprice > 0.08', 'vicprice > 0.00', 'day <= 2.00']
-                                                              # splittato = [nswprice, >, 0.08]
-                        for el in splittato:
-                            if el.isalpha() and el in cols:
-                                contrib.append(el)
-                                swapped.append((el, True))
-
-                            elif el.isalpha() and not el in cols:
-                                contrib.append(el)
-                                swapped.append((el, False))
-
-                            else:  # caso tipo: 0.3 <= feature <= 0.6
-                                pos = 2
-                                contrib.append(splittato[pos])
-                                if splittato[pos] in cols:
-                                    swapped.append((splittato[pos], True))
-                                    break
-                                else:
-                                    swapped.append((splittato[pos], False))
-                                    break
-
-            diz_anchors = {'batch %s' % k: {'row %s' % k: {
-
-                'ML_prediction': pred,
-                #'Anchor_prediction': pred_uno,
-                #'rule': ' AND '.join(exp_anchor.names()),
-                'rule': ' AND '.join(exp_anchor.anchor),
-                'precision': precision,
-                'coverage': coverage,
-                'swapped': swapped,
-                'value_ordered': contrib,
-            }}}
-
-            anchor_res_st.append(diz_anchors)
-            """
-
             k += 1
 
         # ST FILES
@@ -600,17 +477,11 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         with open('results/' + 'ST_LIME_%s.json' % filename, 'w', encoding='utf-8') as f11:
             json.dump(lime_res_st, f11, cls=NumpyEncoder)
 
-        #with open('results/' + 'ST_ANCHOR_REGRESSION_%s.json' % filename, 'w', encoding='utf-8') as f12:
-        #    json.dump(anchor_res_st, f12, cls=NumpyEncoder)
-
-        with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t9:
-            json.dump(time_shap, t9, cls=NumpyEncoder)
-
-        with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t10:
-            json.dump(time_lime, t10, cls=NumpyEncoder)
-
-        # with open('other_files/' + f"ST - ANCHORS - Total time {filename}", 'w', encoding='utf-8') as t11:
-        #    json.dump(time_anchor, t11, cls=NumpyEncoder)
+        # with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t9:
+        #     json.dump(time_shap, t9, cls=NumpyEncoder)
+        #
+        # with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t10:
+        #     json.dump(time_lime, t10, cls=NumpyEncoder)
 
         mean_time_shap = np.mean(time_shap)
         mean_time_lime = np.mean(time_lime)
@@ -622,15 +493,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         f.close()
         f11.close()
-        #f12.close()
-        t9.close()
-        t10.close()
-        #t11.close()
+        # t9.close()
+        # t10.close()
 
         #return ret, lime_res, anchor_res
 
 print(f"xai_anas.py Total time: {(time.time() - first_time) / 60} minutes")
-# tot_time_anas = f"st_anas.py Total time: {(time.time() - first_time) / 60} minutes"
-# with open('other_files/' + f"ST - ANCHOR - Total time: {tot_time_anas}", 'w', encoding='utf-8') as t8:
-#     json.dump(tot_time_anas, t8, cls=NumpyEncoder)
 print('END xai_anas')

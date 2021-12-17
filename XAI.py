@@ -5,7 +5,6 @@ import shap
 import lime
 import lime.lime_tabular
 #from anchor import anchor_tabular
-#from lime import submodular_pick
 
 #import alibi
 from alibi.explainers import AnchorTabular
@@ -17,13 +16,14 @@ from numpyencoder import NumpyEncoder
 import pandas as pd
 import json
 import time
-
+import os
 
 # Connect pandas with plotly
 import cufflinks as cf
 cf.go_offline()
 from plotly.offline import init_notebook_mode
 init_notebook_mode(connected='true')
+
 
 
 first_time = time.time() # returns the processor time
@@ -86,14 +86,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
         predict_fn = lambda x:diz['model'].predict(x)
         explainer_anchor = AnchorTabular(predict_fn, all_cols)
         explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
-        # explainer_anchor = anchor_tabular.AnchorTabularExplainer(class_names=class_names,
-        #                                                          feature_names=all_cols,
-        #                                                          train_data = diz['X_train'],
-        #                                                          #discretizer='quartile'
-        #                                                         )
 
         # Start explanations
-
         for i in range(len(diz['X_test'])):  # da 0 a 66-1
             pred = diz['predictions'][i]
             predict_proba = diz['model'].predict_proba(diz['X_test'][i].reshape(1, -1))[0]
@@ -179,10 +173,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             lime_prediction = exp_lime.local_pred
             lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
             exp_lime.as_pyplot_figure().tight_layout()
-            #plt.text( 0.7, 0.3,f' D3 Local LIME row {str(i)}')
-            #plt.subtitle(f' D3 Local LIME row {str(i)}', y=1.05, fontsize=18)
             plt.savefig('images/' +f' D3 Local LIME row {str(i)} dataset {filename}')
-            exp_lime.save_to_file(f'D3_lime_row_{str(i)}_dataset_{filename}.html')
+            exp_lime.save_to_file('html_images/' + f'D3_lime_row_{str(i)}_dataset_{filename}.html')
 
             variables = []  # (name, real value)
             f_weight = []  # (feature, weight)
@@ -225,72 +217,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
             lime_res.append(lime_diz)
 
-            # SUBMODULAR PICk
-            """
-            There are two charts where we have aggregated the explanations across the 500 points we sampled from out test set(we can run it on
-            all test data points, but chose to do sampling only cause of computation).
-
-            The first chart aggregates the effect of the feature across 0 and 1 cases and ignores the sign when calculating the mean. 
-            This gives you an idea of what features were important in the larger sense.
-
-            The second chart splits the inference across the two labels and looks at them separately. This chart lets us understand 
-            which feature was more important in predicting a particular class.
-            """
-            """
-            print('SUBMODULAR PICK')
-            # https://github.com/marcotcr/lime/blob/master/lime/submodular_pick.py
-            sp_obj = submodular_pick.SubmodularPick(data=diz['X_train'],
-                                                    explainer=explainer_lime,
-                                                    num_features=len(all_cols),
-                                                    predict_fn=diz['model'].predict_proba,
-                                                    #num_exps_desired=10,
-                                                    sample_size=20,
-                                                    top_labels=len(class_names)
-                                                    )
-            # Plot the 10 explanations
-            #[exp.as_pyplot_figure().savefig('images/'+ f'pl {filename}').tight_layout() for exp in sp_obj.sp_explanations]
-
-
-            #sp_explanations: A list of explanation objects that has a high coverage
-            #explanations: All the candidate explanations saved for potential future use.
-            #to compute LIME COVERAGE: len(sp_obj.sp_explanations) / len(sp_obj.explanations)
-            
-            df=pd.DataFrame({})
-            for this_label in range(len(class_names)):
-                print('this_label', this_label)
-                dfl=[]
-                for i,exp in enumerate(sp_obj.sp_explanations):
-                    exp.as_pyplot_figure().savefig(f'LIME global for {filename} {str(i)}');
-                    l=exp.as_list(label=this_label)
-                    l.append(("exp number",i))
-                    dfl.append(dict(l))
-                    print('dfl', dfl)
-                #dftest=pd.DataFrame(dfl)
-                df=df.append(pd.DataFrame(dfl,index=[class_names[this_label] for i in range(len(sp_obj.sp_explanations))]))
-            print('SUBMODULAR PICK', df.head())
-            """
 
             #############################  ANCHORS  ###########################
-            '''
-             An anchor is a sufficient condition - that is, when the anchor holds, the prediction should be the same as the prediction for this instance.
-
-              explainer.explain_instance:
-            - threshold: the previously discussed minimal confidence level. threshold defines the minimum fraction of samples for a candidate anchor that need to 
-                  lead to the same prediction as the original instance. A higher value gives more confidence in the anchor, but also leads to more computation time. 
-                  The default value is 0.95.
-            - tau: determines when we assume convergence for the multi-armed bandit. A bigger value for tau means faster convergence but also looser anchor conditions.
-                  By default equal to 0.15.
-            - beam_size: the size of the beam width. A bigger beam width can lead to a better overall anchor at the expense of more computation time.
-            - batch_size: the batch size used for sampling. A bigger batch size gives more confidence in the anchor, again at the expense of computation time since
-                  it involves more model prediction calls. The default value is 100.
-            - coverage_samples: number of samples used to compute the coverage of the anchor. By default set to 10000.
-
-            We set the precision threshold to 0.95. This means that predictions on observations where the anchor holds will be the same as the prediction on 
-            the explained instance at least 95% of the time.
-
-            https://github.com/marcotcr/anchor/blob/master/notebooks/Anchor%20on%20tabular%20data.ipynb
-            '''
-
             start_time_anchor = time.time()
             class_list_str = ['0', '1']
             pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][i].reshape(1, -1))[0]]
@@ -308,53 +236,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             print('RULES', rules)
             precision = exp_anchor.precision
             coverage = exp_anchor.coverage
-
-            """
-            # exp_anchor = explainer_anchor.explain_instance(diz['X_test'][i],
-            #                                                diz['model'].predict,
-            #                                                threshold=0.70,
-            #                                                delta = 0.1,
-            #                                                tau = 0.05,
-            #                                                batch_size = 100,
-            #                                                coverage_samples = 2000,
-            #                                                beam_size=len(all_cols))
-            #print(f"D3 -ANCHOR - Total time: {(time.time() - start_time) / 60} minutes")
-            #time_anchor1 = f"D3 -ANCHOR - Total time: {(time.time() - start_time_anchor) / 60} minutes"
-            end_time_a = time.time() - start_time_anchor
-            time_anchor.append(end_time_a)
-
-            #names to exp
-            try:
-                names_to_exp = explainer_anchor.add_names_to_exp(diz['X_test'][i])
-                print('names_to_exp', names_to_exp)
-            except:
-                print("An exception occurred")
-                #continue
-
-            prediction = explainer_anchor.class_names[diz['model'].predict(diz['X_test'][i].reshape(1, -1))[0]]
-            print('ANCHOR PREDICTION', prediction)
-
-            # exp_anchor.show_in_notebook()
-            # exp_anchor.examples(only_different_prediction = True)
-            # print('esempi',exp_anchor.examples()) #np.ndarray
-
-            rules = exp_anchor.names()
-            precision = round(exp_anchor.precision(), 3)
-            coverage = round(exp_anchor.coverage(), 3)
-
-
-            print()
-            print('anchor: %s' % (' AND '.join(exp_anchor.names())))
-            print('precision: %.2f' % exp_anchor.precision())
-            print('coverage: %.2f' % exp_anchor.coverage())
-            
-            '''
-            # Get test examples where the anchora applies
-            fit_anchor = np.where(np.all(diz['X_test'][i:, exp_anchor.features()] == diz['X_test'][i][exp_anchor.features()], axis=1))[0]
-            print('Anchor test precision: %.2f' % (np.mean(diz['model'].predict(diz['X_test'][fit_anchor]) == diz['model'].predict(diz['X_test'][i].reshape(1, -1)))))
-            print('Anchor test coverage: %.2f' % (fit_anchor.shape[0] / float(test_set.shape[0])))    
-            print()'''
-            """
 
             contrib = []
             swapped = []
@@ -405,9 +286,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'class_names': class_names,
                 'd3_prediction': pred,
                 'd3_pred_probs': predict_proba,
-                #'Anchor_prediction': prediction,
                 'Anchor_prediction': pred_uno,
-                #'rule': ' AND '.join(exp_anchor.names()),
                 'rule': ' AND '.join(exp_anchor.anchor),
                 'precision': precision,
                 'coverage': coverage,
@@ -418,9 +297,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             anchor_res.append(diz_anchors)
 
         k += 1
-
-    print('anchors')
-    print(anchor_res)
 
     mean_time_shap = np.mean(time_shap)
     mean_time_lime = np.mean(time_lime)
@@ -440,22 +316,11 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     with open('results/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
 
-    # with open('other_files/' + f"D3 - SHAP - Total time {filename}", 'w', encoding='utf-8') as t1:
-    #     json.dump(time_shap, t1, cls=NumpyEncoder)
-    #
-    # with open('other_files/' + f"D3 - LIME - Total time {filename}", 'w', encoding='utf-8') as t2:
-    #     json.dump(time_lime, t2, cls=NumpyEncoder)
-    #
-    # with open('other_files/' + f"D3 - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t3:
-    #     json.dump(time_anchor, t3, cls=NumpyEncoder)
     #return ret, anchor_res, lime_res
 
     f.close()
     f1.close()
     ff2.close()
-    # t1.close()
-    # t2.close()
-    # t3.close()
 
 
 
@@ -507,11 +372,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                 discretizer='quartile',
                                                                 verbose=True)
 
-        # explainer_anchor = anchor_tabular.AnchorTabularExplainer(class_names = class_names,
-        #                                                          feature_names=all_cols,
-        #                                                          train_data=diz['X_train'],
-        #                                                          #discretizer='quartile'
-        #                                                         )
 
         predict_fn = lambda x: diz['model'].predict(x)
         explainer_anchor = AnchorTabular(predict_fn, all_cols)
@@ -550,7 +410,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         shap.initjs()
         shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred], test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
         name = f'ST Local SHAP row {str(k)}, dataset {filename}'
-        plt.title(f'Local forceplot row {str(k)} dataset {filename}', position=(0.3, 0.7))
+        plt.title(f'Local SHAP row {str(k)} dataset {filename}')
         plt.tight_layout()
         plt.savefig('images/'+ name)
 
@@ -589,9 +449,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
         exp_lime.as_pyplot_figure().tight_layout()
         plt.text(0.3, 0.7, f' D3 Local LIME row {str(k)}')
-        #plt.tight_layout()
         plt.savefig('images/' + f' ST Local LIME row {str(k)} dataset {filename}')
-        exp_lime.save_to_file(f'ST_lime_row_{str(k)}_dataset_{filename}.html')
+        exp_lime.save_to_file('html_images/' + f'ST_lime_row_{str(k)}_dataset_{filename}.html')
 
         variables = []  # (name, real value)
         f_weight = []  # (feature, weight)
@@ -635,48 +494,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         lime_res_st.append(lime_diz)
 
-        # SUBMODULAR PICk
-        """
-        There are two charts where we have aggregated the explanations across the 500 points we sampled from out test set(we can run it on
-        all test data points, but chose to do sampling only cause of computation).
-        
-        The first chart aggregates the effect of the feature across 0 and 1 cases and ignores the sign when calculating the mean. 
-        This gives you an idea of what features were important in the larger sense.
-
-        The second chart splits the inference across the two labels and looks at them separately. This chart lets us understand 
-        which feature was more important in predicting a particular class.
-        """
-        """
-        sp_obj = submodular_pick.SubmodularPick(explainer_lime,
-                                                diz['X_train'],
-                                                diz['model'].predict_proba,
-                                                sample_size=200,
-                                                num_features=len(all_cols),
-                                                num_exps_desired=10)
-        # Plot the 5 explanations
-        [exp_lime.as_pyplot_figure(label=exp_lime.available_labels()[0]) for exp_lime in sp_obj.sp_explanations]
-        # Make it into a dataframe
-        W_pick = pd.DataFrame(
-            [dict(this.as_list(this.available_labels()[0])) for this in sp_obj.sp_explanations]).fillna(0)
-
-        W_pick['prediction'] = [this.available_labels()[0] for this in sp_obj.sp_explanations]
-
-        # Making a dataframe of all the explanations of sampled points
-        W = pd.DataFrame([dict(this.as_list(this.available_labels()[0])) for this in sp_obj.explanations]).fillna(0)
-        W['prediction'] = [this.available_labels()[0] for this in sp_obj.explanations]
-
-        # Plotting the aggregate importances
-        np.abs(W.drop("prediction", axis=1)).mean(axis=0).sort_values(ascending=False).head(5).sort_values(ascending=True).py.plot(kind="barh")
-
-        # Aggregate importances split by classes
-        grped_coeff = W.groupby("prediction").mean()
-
-        grped_coeff = grped_coeff.T
-        grped_coeff["abs"] = np.abs(grped_coeff.iloc[:, 0])
-        grped_coeff.sort_values("abs", inplace=True, ascending=False)
-        grped_coeff.head(25).sort_values("abs", ascending=True).drop("abs", axis=1).py.plot(
-            kind="barh", bargap=0.5)"""
-
         ################### ANCHORS #########################################
         start_time_anch = time.time()
         class_list_str = ['0', '1']
@@ -696,41 +513,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         precision = exp_anchor.precision
         coverage = exp_anchor.coverage
 
-
-        """
-        exp_anchor = explainer_anchor.explain_instance(diz['X_test'][0],
-                                                       diz['model'].predict,
-                                                       threshold=0.90,
-                                                       beam_size=len(all_cols))
-
-        end_time_a = time.time() - start_time_anch
-        time_anchor.append(end_time_a)
-
-        #print(f"Total time: {(time.time() - start_time) / 60} minutes")
-        #time_anchor2 = f"Total time: {(time.time() - start_time) / 60} minutes"
-
-        prediction_anch = explainer_anchor.class_names[diz['model'].predict(diz['X_test'].reshape(1, -1))[0]]
-
-        # exp_anchor.show_in_notebook()
-        # exp_anchor.examples(only_different_prediction = True)
-        # print('esempi',exp_anchor.examples()) #np.ndarray
-
-        rules = exp_anchor.names()
-        precision = round(exp_anchor.precision(), 3)
-        coverage = round(exp_anchor.coverage(), 3)
-
-        '''
-        print()
-        print('anchor: %s' % (' AND '.join(exp_anchor.names())))
-        print('precision: %.2f' % exp_anchor.precision())
-        print('coverage: %.2f' % exp_anchor.coverage())
-
-        # Get test examples where the anchora applies
-        fit_anchor = np.where(np.all(diz['X_test'][i:, exp_anchor.features()] == diz['X_test'][i][exp_anchor.features()], axis=1))[0]
-        print('Anchor test precision: %.2f' % (np.mean(diz['model'].predict(diz['X_test'][fit_anchor]) == diz['model'].predict(diz['X_test'][i].reshape(1, -1)))))
-        print('Anchor test coverage: %.2f' % (fit_anchor.shape[0] / float(test_set.shape[0])))    
-        print()'''
-        """
         contrib = []
         swapped = []
 
@@ -739,12 +521,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                 contrib.append(contrib[-1])
             else:
                 contrib.append('empty rule: all neighbors have the same label')  # al primo batch potrebbe essere vuoto
-
-
         else:
             for s in rules:  # nel caso in cui ci siano più predicati
                 splittato = s.split(' ')  # splittato = [nswprice, >, 0.08], [0.3 <= feature <= 0.6]
-                # print('split', splittato)
                 n = len(splittato)
 
                 if n == 3:  # 1 feature: caso tipo [feature <= 0.5]
@@ -754,7 +533,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                     else:
                         swapped.append((splittato[0], False))
                 if n > 3:  # more than 1 feature: caso tipo rules = ['nswprice > 0.08', 'vicprice > 0.00', 'day <= 2.00']
-                    # pos = 0                                      # splittato = [nswprice, >, 0.08]
+                                                         # splittato = [nswprice, >, 0.08]
                     for el in splittato:
                         if el.isalpha() and el in cols:
                             contrib.append(el)
@@ -766,7 +545,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
                         else:  # caso tipo: 0.3 <= feature <= 0.6
                             pos = 2
-                            # print('splittato',splittato)
                             contrib.append(splittato[pos])
                             if splittato[pos] in cols:
                                 swapped.append((splittato[pos], True))
@@ -779,9 +557,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             'class_names': class_names,
             'ML_prediction': pred,                       # ST prediction
             'ML_pred_probs': predict_proba,              # ST predicted proba
-            #'Anchor_prediction': prediction_anch,        # xai prediction
             'Anchor_prediction': pred_uno,
-            #'rule': ' AND '.join(exp_anchor.names()),    # anchor
             'rule': ' AND '.join(exp_anchor.anchor),
             'precision': precision,
             'coverage': coverage,
@@ -811,28 +587,14 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     with open('other_files/' + 'ST_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as f2:
         json.dump(anchor_res_st, f2, cls=NumpyEncoder)
 
-    # with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t4:
-    #     json.dump(time_shap, t4, cls=NumpyEncoder)
-    #
-    # with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t5:
-    #     json.dump(time_lime, t5, cls=NumpyEncoder)
-    #
-    # with open('other_files/' + f"ST - ANCHOR - Total time {filename}", 'w', encoding='utf-8') as t6:
-    #     json.dump(time_anchor, t6, cls=NumpyEncoder)
-
     f.close()
     f1.close()
     f2.close()
-    # t4.close()
-    # t5.close()
-    # t6.close()
 
     #return ret, lime_res, anchor_res
 
 
 tot_time = f"XAI.PY Total time: {(time.time() - first_time) / 60} minutes"
-# with open('other_files/' + f"XAI - Total time", 'w', encoding='utf-8') as t7:
-#     json.dump(tot_time, t7, cls=NumpyEncoder)
 print(f"XAI.PY Total time: {(time.time() - first_time) / 60} minutes")
 print('END XAI')
 

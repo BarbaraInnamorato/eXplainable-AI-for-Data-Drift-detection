@@ -32,6 +32,9 @@ if not os.path.exists('results'):
 if not os.path.exists('images'):
     os.mkdir('images')
 
+if not os.path.exists('html_images'):
+    os.mkdir('html_images')
+
 if not os.path.exists('other_files'):
     os.mkdir('other_files') # for anchor files and RF metrics
 
@@ -125,9 +128,6 @@ def faicose_un_dataset(dataset_name):
         XAI.d3_xai(d3, cols_to_print, all_cols, dataset_name)
         XAI.st_xai(st, cols_to_print, all_cols, dataset_name)
         SP_LIME.sp_lime(d3, all_cols, dataset_name)
-
-
-
 
     # Monitoring data - PERFORM RANDOM FOREST (REGRESSION/CLASSIFICATION)
     for idx, s in enumerate(streams):
