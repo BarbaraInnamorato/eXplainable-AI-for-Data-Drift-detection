@@ -61,9 +61,14 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
         k = 0
 
-        print("D3 train accuracy: %0.3f" % diz['model'].score(train_set, diz['y_train']))
-        print("D3 test accuracy: %0.3f" % diz['model'].score(test_set, diz['y_test']))
+        d3_train_acc = diz['model'].score(train_set, diz['y_train'])
+        d3_test_acc = diz['model'].score(test_set, diz['y_test'])
+        #print("D3 train accuracy: %0.3f" % diz['model'].score(train_set, diz['y_train']))
+        #print("D3 test accuracy: %0.3f" % diz['model'].score(test_set, diz['y_test']))
 
+
+        d3_accuracy_df = pd.DataFrame([d3_train_acc, d3_test_acc], index=['accuracy'])
+        d3_accuracy_df.to_excel(f'other_files/D3_acc_{filename}.xlsx')
 
         # Setting explainers
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
@@ -397,8 +402,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         #expected_values = list(explainer_shap.expected_value)
         print(f'ST shap values {filename}', shap_values)
-        print(f'ST expected values {filename}', explainer_shap.expected_value)
-
         model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4)
         class_pred = np.argmax(abs(model_output))
 
@@ -575,7 +578,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     index = ['mean_time_shap', 'mean_time_lime', 'mean_time_anchor']
     means = [mean_time_shap,mean_time_lime,mean_time_anchor]
     to_export = pd.DataFrame(means, columns=['mean time'], index=index)
-    to_export.to_excel(f'other_files/ST {filename}.xlsx')
+    to_export.to_excel(f'other_files/ST_{filename}.xlsx')
 
     # ST FILES
     with open('results/' + 'ST_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:

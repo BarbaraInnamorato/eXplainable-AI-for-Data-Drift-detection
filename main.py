@@ -41,7 +41,7 @@ if not os.path.exists('other_files'):
 
 # Setup
 #models = ['d3', 'student-teacher']
-models = ['d3']
+models = [ 'student-teacher']
 
 
 n_repetitions = 1  # se lascio 1 poi devo togliere tutti i for
@@ -87,14 +87,14 @@ def faicose_un_dataset(dataset_name):
 
     cols_to_print = [dstream.feature_names[x] for x in drift_cols]
     all_cols = dstream.feature_names
-
+    """
     # Detection Phase
     inf_results = {m: [] for m in models}
     anas_results = {m: [] for m in models}
 
     inference_functions = {
-        'd3': d3_inference(drift_point, train_results),
-       # 'student-teacher': teacher_student_inference(drift_point,train_results)
+        #'d3': d3_inference(drift_point, train_results),
+        'student-teacher': teacher_student_inference(drift_point,train_results)
         }
 
     ii = 1
@@ -103,6 +103,7 @@ def faicose_un_dataset(dataset_name):
         r['drift_point'] = real_drift_points[idx]
         print("Iteration {}".format(ii))
 
+    
         for m in models:
             print('model fitting',m)
             if not dataset_name in ['anas']:
@@ -114,21 +115,24 @@ def faicose_un_dataset(dataset_name):
     print('Swapped columns for drift injection are', cols_to_print)
     print()
 
-
+    
     # data for xai
     if dataset_name in ['anas']:
-        #anas_st = anas_results['student-teacher'][0]
-        anas_d3 = anas_results['d3'][0]
-        XAI.d3_xai(anas_d3, cols_to_print, all_cols, dataset_name)
-        #st_anas.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
-        SP_LIME.sp_lime(anas_d3, all_cols, dataset_name)
+        anas_st = anas_results['student-teacher'][0]
+        #anas_d3 = anas_results['d3'][0]
+        #XAI.d3_xai(anas_d3, cols_to_print, all_cols, dataset_name)
+        st_anas.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
+        #SP_LIME.sp_lime(anas_d3, all_cols, dataset_name)
+        SP_LIME.sp_lime(anas_st, all_cols, dataset_name)
 
     else:
-        #st = inf_results['student-teacher'][0]
-        d3 = inf_results['d3'][0]
-        XAI.d3_xai(d3, cols_to_print, all_cols, dataset_name)
-        #XAI.st_xai(st, cols_to_print, all_cols, dataset_name)
-        SP_LIME.sp_lime(d3, all_cols, dataset_name)
+        st = inf_results['student-teacher'][0]
+        #d3 = inf_results['d3'][0]
+        #XAI.d3_xai(d3, cols_to_print, all_cols, dataset_name)
+        XAI.st_xai(st, cols_to_print, all_cols, dataset_name)
+        #SP_LIME.sp_lime(d3, all_cols, dataset_name)
+        SP_LIME.st_sp_lime(st, all_cols, dataset_name)
+    """
 
     # Monitoring data - PERFORM RANDOM FOREST (REGRESSION/CLASSIFICATION)
     for idx, s in enumerate(streams):
@@ -158,46 +162,38 @@ def execute_main():
 
     print("Starting 'execute_main'")
     # creating processes
-    #p1 = mp.Process(target=faicose_un_dataset, args=('anas',))
+    p1 = mp.Process(target=faicose_un_dataset, args=('electricity',))
     p2 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
-    """
     p3 = mp.Process(target=faicose_un_dataset, args=('weather',))
-    p4 = mp.Process(target=faicose_un_dataset, args=('forestcover',))"""
+    p4 = mp.Process(target=faicose_un_dataset, args=('anas',))
 
     # starting processes
-    #print(p1.start())
+    print(p1.start())
     print(p2.start())
-    """
     print(p3.start())
     print(p4.start())
-    """
+
 
     # process IDs
-    #print("ID of process p1: {}".format(p1.pid))
+    print("ID of process p1: {}".format(p1.pid))
     print("ID of process p2: {}".format(p2.pid))
-    """
     print("ID of process p3: {}".format(p3.pid))
     print("ID of process p4: {}".format(p4.pid))
-    """
 
     # wait until processes are finished
-    #p1.join()
+    p1.join()
     p2.join()
-    """    
     p3.join()
     p4.join()
-    """
 
     # all processes finished
     print("All processes finished execution!")
 
     # check if processes are alive
-    #print("Process p1 is alive: {}".format(p1.is_alive()))
+    print("Process p1 is alive: {}".format(p1.is_alive()))
     print("Process p2 is alive: {}".format(p2.is_alive()))
-    """
     print("Process p3 is alive: {}".format(p3.is_alive()))
     print("Process p4 is alive: {}".format(p4.is_alive()))
-    """
 
     # Performances Computation (outside the for: takes files from results folder)
     performance.read_files()
@@ -208,5 +204,4 @@ def execute_main():
 
 if __name__ == "__main__":
     execute_main()
-
 

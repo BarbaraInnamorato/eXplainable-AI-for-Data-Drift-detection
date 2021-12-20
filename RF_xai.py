@@ -192,8 +192,6 @@ def rf_classification(to_export, all_cols, filename):
 
     Also note that both random features have very low importances (close to 0) as expected.
     """
-
-
     perm_importance = permutation_importance(rfc, to_export['X_test_post'], to_export['y_test_post'])
     perm_zip = list(zip(all_cols, perm_importance['importances_mean']))
     perm_sorted = sorted(perm_zip, key= lambda  x:x[1])
@@ -207,17 +205,13 @@ def rf_classification(to_export, all_cols, filename):
     plt.savefig('images/'+'RF Permutation Feature Importance 2 %s' % filename)
 
     # Global explanation for the performance of RANDOM FOREST
-    #print('faccio explainer')
-
-
-
-
     sample_train = shap.sample(to_export['X_train'],nsamples=10, random_state=90) # nsamples=100
     explainer = shap.KernelExplainer(rfc.predict_proba,
                                      sample_train,
                                      feature_names=all_cols,
-                                     link = 'identity',
-                                     l1_reg = len(all_cols))
+                                     link='identity',
+                                     l1_reg=len(all_cols))
+
     print('explainer finito CLASSIFIC, ora shap values')
     start_time = time.time()
     shap_values = explainer.shap_values(to_export['X_test_post'])
