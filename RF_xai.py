@@ -33,15 +33,14 @@ def rf_regression(to_export,  all_cols, filename):
 
     features = all_cols
     importances = rfc.feature_importances_
-    #print('importances', importances)
     indices = np.argsort(importances)
     plt.figure(figsize=(12, 10))
-    plt.title('Random Forest Feature Importances (MDI)')
+    plt.title('Random Forest Feature Importances (MDI) - Regression')
     plt.barh(range(len(indices)), importances[indices], color='b', align='center')
     plt.yticks(range(len(indices)), [features[i] for i in indices])
     plt.xlabel('Relative Importance')
     plt.tight_layout()
-    plt.savefig('images/RF Feature Importances %s' % filename)
+    plt.savefig(f'images/RF Feature Importances {filename}')
 
     #print('PERM IMPORTANCE REGRESSION 1')
     result = permutation_importance(rfc, to_export['X_test_post'], to_export['y_test_post'], n_repeats=10, random_state=42, n_jobs=2 )
@@ -76,7 +75,8 @@ def rf_regression(to_export,  all_cols, filename):
 
     sample_train = shap.sample(to_export['X_train'], nsamples=100, random_state=90)
     # Global explanation for the performance of RANDOM FOREST
-    explainer = shap.KernelExplainer(rfc.predict, sample_train,
+    explainer = shap.KernelExplainer(rfc.predict,
+                                     sample_train,
                                      feature_names=all_cols,
                                      link = 'identity',
                                      l1_reg = len(all_cols))
@@ -86,8 +86,6 @@ def rf_regression(to_export,  all_cols, filename):
     shap_values = explainer.shap_values(to_export['X_test_post']) # provo a usare un sample
     print('shap val RF regression \n', shap_values)
     end_time = (time.time() - start_time) / 60
-
-    #print(f"RF_REGRESSION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
     model_output_rf = (explainer.expected_value + shap_values.sum()).round(4)
     print('model output RF SHAP', model_output_rf)
 
@@ -126,6 +124,7 @@ def rf_classification(to_export, all_cols, filename):
     """
     rfc.fit(to_export['X_train'], to_export['y_train'])
     class_names = np.unique(to_export['y_train'])
+    print('class_names', class_names)
 
     avg = ''
     if len(class_names) == 2:
@@ -161,16 +160,13 @@ def rf_classification(to_export, all_cols, filename):
     features = all_cols
     importances = rfc.feature_importances_
     indices = np.argsort(importances)
-    #print('indices', indices)
-    #sorted_zip = sorted(list(zip(importances, all_cols)), key = lambda x:x[0])
-    #print('sorted_zip', sorted_zip)
     plt.figure(figsize=(12,10))
-    plt.title('Random Forest Feature Importances (MDI)')
+    plt.title('Random Forest Feature Importances (MDI)- Classification')
     plt.barh(range(len(indices)), importances[indices], color='b', align='center')
     plt.yticks(range(len(indices)), [features[i] for i in indices])
     plt.xlabel('Relative Importance')
     plt.tight_layout()
-    plt.savefig('images/RF Feature Importances %s' % filename)
+    plt.savefig(f'images/RF Feature Importances {filename}')
 
 
     #print('PERM IMPORTANCE 1')
@@ -216,21 +212,25 @@ def rf_classification(to_export, all_cols, filename):
     start_time = time.time()
     shap_values = explainer.shap_values(to_export['X_test_post'])
     tot_time = (time.time() - start_time) / 60
-    #print(f"RF_CLASSIFICATION_SHAP Total time: {(time.time() - start_time) / 60} minutes")
     print('shap val CLASSIFIC RF', len(shap_values),shap_values)
     model_output = (explainer.expected_value + shap_values[1].sum()).round(4)
     class_pred = np.argmax(abs(model_output))
 
     fig = plt.figure(constrained_layout=True)
-    shap.summary_plot(shap_values, to_export['X_test_post'], feature_names=all_cols,plot_type = 'bar', show=False)
-    plt.title(f'RF SHAP summary plot DOT {filename}')
-    fig.tight_layout()
-    fig.savefig('images/RF_BAR_Summary_plot_%s' % filename)
 
-    # shap.summary_plot(shap_values[1], to_export['X_test_post'], feature_names=all_cols, plot_type = 'dot',show=False)
-    # plt.title(f'RF SHAP summary plot DOT {filename}')
-    # plt.tight_layout()
-    # plt.savefig('images/RF_BAR_Summary_plot_%s' % filename)
+    if len(class_names) > 2:
+        print(f'PLOTTING SHAP BAR {filename}')
+        shap.summary_plot(shap_values, to_export['X_test_post'], feature_names=all_cols, plot_type='bar', show=False)
+        plt.title(f'RF SHAP summary plot DOT {filename}')
+        fig.tight_layout()
+        fig.savefig('images/RF_BAR_Summary_plot_{filename}')
+    if len(class_names) == 2:
+        print(f'PLOTTING SHAP DOT {filename}')
+        shap.summary_plot(shap_values[0], to_export['X_test_post'], feature_names=all_cols, plot_type='dot', show=False)
+        #shap.plots.beeswarm(shap_values)
+        plt.title(f'RF SHAP summary plot DOT {filename}')
+        plt.tight_layout()
+        plt.savefig('images/RF_DOT_Summary_plot_{filename}')
 
     #print('Compute accuracy metrics for random forest classification')
     diz_rf_cl = {"shap prediction": class_pred,
@@ -243,7 +243,6 @@ def rf_classification(to_export, all_cols, filename):
                  'Random Forest feature importance': importances,
                  'F1_score_pre': score_test_pre,
                  'F1_score_post': score_test_post,
-                # 'top_k_accuracy': metrics.top_k_accuracy_score(to_export['y_test_post'], pred_test_post, k=2, normalize=False) # Not normalizing gives the number of "correctly" classified samples
                  'time': tot_time
               }
 
