@@ -67,8 +67,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
         #print("D3 test accuracy: %0.3f" % diz['model'].score(test_set, diz['y_test']))
 
 
-        d3_accuracy_df = pd.DataFrame([d3_train_acc, d3_test_acc], index=['accuracy'])
-        d3_accuracy_df.to_excel(f'other_files/D3_acc_{filename}.xlsx')
+        #d3_accuracy_df = pd.DataFrame([d3_train_acc, d3_test_acc], index=['accuracy'])
+        #d3_accuracy_df.to_excel(f'other_files/D3_acc_{filename}.xlsx')
 
         # Setting explainers
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
