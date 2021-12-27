@@ -105,7 +105,7 @@ def rf_classification(to_export, all_cols, filename):
         fig.savefig(f'images/RF_BAR_Summary_plot_{filename}')
 
 
-        shap.summary_plot(shap_values[class_pred], to_export['X_test_post'], feature_names=all_cols, plot_type='dot',show=False)
+        #shap.summary_plot(shap_values[class_pred], to_export['X_test_post'], feature_names=all_cols, plot_type='dot',show=False)
 
 
         diz_rf_cl = {"shap prediction": class_pred,
@@ -121,7 +121,7 @@ def rf_classification(to_export, all_cols, filename):
                      'time': tot_time
                      }
 
-        with open('other_files/RF_METRICS_CLASSIFICATION_POST_%s.json' % filename, 'w', encoding='utf-8') as f2:
+        with open('other_files/' + 'RF_METRICS_CLASSIFICATION_POST_%s.json' % filename, 'w', encoding='utf-8') as f2:
             json.dump(diz_rf_cl, f2, cls=NumpyEncoder)
         f2.close()
 
@@ -198,6 +198,7 @@ def rf_classification(to_export, all_cols, filename):
 
     plt.close('all')
 
+    print('now permutation importance')
     Perm_importance.compute_pfi(rfc, to_export, all_cols, filename)
 
 

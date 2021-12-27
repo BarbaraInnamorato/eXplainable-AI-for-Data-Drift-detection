@@ -67,8 +67,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
         #print("D3 test accuracy: %0.3f" % diz['model'].score(test_set, diz['y_test']))
 
 
-        #d3_accuracy_df = pd.DataFrame([d3_train_acc, d3_test_acc], index=['accuracy'])
-        #d3_accuracy_df.to_excel(f'other_files/D3_acc_{filename}.xlsx')
+        d3_accuracy_df = pd.DataFrame([d3_train_acc, d3_test_acc], columns=['accuracy'])
+        d3_accuracy_df.to_excel(f'other_files/D3_acc_{filename}.xlsx')
 
         # Setting explainers
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
@@ -116,21 +116,21 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4) #list of probs
             class_pred = np.argmax(abs(model_output))
             print(f'SHAP model output {filename}', model_output)
+            print('shap_val sum', np.sum(shap_values))
             print(f'SHAP VALUES {filename}', shap_values)
 
             # questo mo_output è l'output della black-box
-            #mo_output = (explainer_shap.expected_value[class_pred] + shap_values[class_pred].sum()).round(4)
-            #print('mo output', mo_output)
+            mo_output = (explainer_shap.expected_value[class_pred] + shap_values[class_pred].sum()).round(4)
+            print('mo output', mo_output)
 
             zipped = list(zip(shap_values[pred], all_cols))
             ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
 
             # Get the force plot for each row
             shap.initjs()
-            fig = plt.figure()
+            fig = plt.figure(figsize = (20,8))
             fig.set_figheight(6)
             shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred],test_set.iloc[i,:], link = 'logit',feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-            #plt.title(f'Local forceplot row {str(i)} dataset {filename}', position=(0.3, 0.7))
             plt.tight_layout()
             plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
 
@@ -356,7 +356,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     time_anchor = []
 
     for diz in data_for_xai:
-        #print('---- ST ------')
+        print('---- ST ------')
+        print(diz)
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
         test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
 
@@ -404,6 +405,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         print(f'ST shap values {filename}', shap_values)
         model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4)
         class_pred = np.argmax(abs(model_output))
+        print('model output', model_output)
+        print('shap_val sum', np.sum(shap_values))
 
         zipped = list(zip(shap_values[class_pred][0], all_cols))
         ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
@@ -411,6 +414,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         # Get the force plot for each row
         shap.initjs()
+        fig = plt.figure(figsize=(20, 8))
         shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred], test_set, link='logit', feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
         name = f'ST Local SHAP row {str(k)}, dataset {filename}'
         plt.title(f'Local SHAP row {str(k)} dataset {filename}')
@@ -500,10 +504,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         ################### ANCHORS #########################################
         start_time_anch = time.time()
         class_list_str = ['0', '1']
-        pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][k].reshape(1, -1))[0]]
+        pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][0].reshape(1, -1))[0]]
         print('ALIBI PREDICTION', pred_uno)
 
-        exp_anchor = explainer_anchor.explain(diz['X_test'][k],
+        exp_anchor = explainer_anchor.explain(diz['X_test'][0],
                                               threshold=0.90,
                                               beam_size=len(all_cols),
                                               coverage_samples=1000)

@@ -61,6 +61,13 @@ def read_data_weather(foldername="data/weather/", shuffle=False):
 
     y = df.iloc[:, -1:]  # 0,1
 
+    sns.countplot(y)
+
+    # Add labels
+    plt.title('Countplot of Weather')
+    plt.xlabel('Precipitation')
+    plt.ylabel('Instances')
+    plt.show()
     # Pearson correlation
     # plt.figure(figsize=(12, 10))
     # cor = X.corr()

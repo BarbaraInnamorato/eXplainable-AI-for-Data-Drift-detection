@@ -161,9 +161,10 @@ def faicose_un_dataset(dataset_name):
             prova_rf_2.plot_oob_regression(to_export, all_cols, dataset_name)
         #     RF_xai.rf_regression(to_export, all_cols, dataset_name)
         else:
-            print('----------RANDOM FOREST %s'%dataset_name)
-            prova_rf_2.plot_oob(to_export, all_cols, dataset_name)
-        #     RF_xai.rf_classification(to_export, all_cols, dataset_name)
+            print('----------RANDOM FOREST CLASSIFICATION %s'%dataset_name)
+            #prova_rf_2.plot_oob(to_export, all_cols, dataset_name)
+            RF_xai.rf_classification(to_export, all_cols, dataset_name)
+
 
 
 def execute_main():
@@ -171,37 +172,37 @@ def execute_main():
     print("Starting 'execute_main'")
     # creating processes
     p1 = mp.Process(target=faicose_un_dataset, args=('electricity',))
-    p2 = mp.Process(target=faicose_un_dataset, args=('weather',))
-    p3 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
-    p4 = mp.Process(target=faicose_un_dataset, args=('anas',))
+    # p2 = mp.Process(target=faicose_un_dataset, args=('weather',))
+    # p3 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
+    # p4 = mp.Process(target=faicose_un_dataset, args=('anas',))
 
     # starting processes
     print(p1.start())
-    print(p2.start())
-    print(p3.start())
-    print(p4.start())
+    # print(p2.start())
+    # print(p3.start())
+    # print(p4.start())
 
 
     # process IDs
     print("ID of process p1: {}".format(p1.pid))
-    print("ID of process p2: {}".format(p2.pid))
-    print("ID of process p3: {}".format(p3.pid))
-    print("ID of process p4: {}".format(p4.pid))
+    # print("ID of process p2: {}".format(p2.pid))
+    # print("ID of process p3: {}".format(p3.pid))
+    # print("ID of process p4: {}".format(p4.pid))
 
     # wait until processes are finished
     p1.join()
-    p2.join()
-    p3.join()
-    p4.join()
+    # p2.join()
+    # p3.join()
+    # p4.join()
 
     # all processes finished
     print("All processes finished execution!")
 
     # check if processes are alive
     print("Process p1 is alive: {}".format(p1.is_alive()))
-    print("Process p2 is alive: {}".format(p2.is_alive()))
-    print("Process p3 is alive: {}".format(p3.is_alive()))
-    print("Process p4 is alive: {}".format(p4.is_alive()))
+    # print("Process p2 is alive: {}".format(p2.is_alive()))
+    # print("Process p3 is alive: {}".format(p3.is_alive()))
+    # print("Process p4 is alive: {}".format(p4.is_alive()))
 
     # Performances Computation (outside the for: takes files from results folder)
     performance.read_files()

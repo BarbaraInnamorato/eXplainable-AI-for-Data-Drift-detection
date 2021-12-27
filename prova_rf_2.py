@@ -97,18 +97,17 @@ def plot_oob(to_export, all_cols, filename):
 
     # Global explanation for the performance of RANDOM FOREST
     sample_train = shap.sample(to_export['X_train'], nsamples=10, random_state=90)  # nsamples=100
-    # explainer = shap.KernelExplainer(clf.predict_proba,
-    #                                  sample_train,
-    #                                  #to_export['X_train'],
-    #                                  feature_names=all_cols,
-    #                                  link='identity',
-    #                                  l1_reg=len(all_cols))
+    explainer = shap.KernelExplainer(clf.predict_proba,
+                                     sample_train,
+                                     #to_export['X_train'],
+                                     feature_names=all_cols,
+                                     link='identity',
+                                     l1_reg=len(all_cols))
 
-    explainer = shap.TreeExplainer(clf,
-                                 to_export['X_train'],
-                                 feature_names=all_cols,
-
-                                 )
+    # explainer = shap.TreeExplainer(clf,
+    #                              to_export['X_train'],
+    #                              feature_names=all_cols,
+    #                              )
 
     print('explainer finito CLASSIFIC, ora shap values')
     start_time = time.time()
@@ -127,7 +126,7 @@ def plot_oob(to_export, all_cols, filename):
     fig.tight_layout()
     fig.savefig(f'images/RF_BAR_Summary_plot_{filename}')
 
-    shap.summary_plot(shap_values[0], to_export['X_test_post'], show=False)
+    shap.summary_plot(shap_values[0], to_export['X_test_post'], type='dot', show=False)
 
     diz_rf_cl = {"shap prediction": class_pred,
                  "RF train accuracy": clf.score(to_export['X_train'], to_export['y_train']),
