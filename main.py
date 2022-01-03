@@ -4,9 +4,6 @@ warnings.filterwarnings("ignore")
 import multiprocessing as mp
 print('Number of processor', mp.cpu_count())
 
-# Dataset loading
-#from datasetloader.load_dataset import load_stream
-
 # Drift Methods
 from studentteacher.student_teacher import *
 from d3.D3 import *
@@ -16,7 +13,6 @@ import XAI
 import st_anas
 import RF_xai
 import SP_LIME
-import Perm_importance
 import prova_rf_2
 
 # Utilities
@@ -43,7 +39,7 @@ if not os.path.exists('other_files'):
 
 # Setup
 models = ['d3', 'student-teacher']
-#models = ['d3']
+#models = ['student-teacher']
 
 
 n_repetitions = 1  # se lascio 1 poi devo togliere tutti i for
@@ -117,7 +113,7 @@ def faicose_un_dataset(dataset_name):
     print('Swapped columns for drift injection are', cols_to_print)
     print()
 
-    
+
     # data for xai
     if dataset_name in ['anas']:
         anas_st = anas_results['student-teacher'][0]
@@ -153,17 +149,14 @@ def faicose_un_dataset(dataset_name):
                      'y_test_post': y_test_post
                       }
 
-        #RF_xai.rf_classification(to_export, all_cols, dataset_name)
-
-
         if dataset_name in ['anas']:
             print('----------RANDOM FOREST %s'%dataset_name)
             prova_rf_2.plot_oob_regression(to_export, all_cols, dataset_name)
-        #     RF_xai.rf_regression(to_export, all_cols, dataset_name)
+            #RF_xai.rf_regression(to_export, all_cols, dataset_name)
         else:
             print('----------RANDOM FOREST CLASSIFICATION %s'%dataset_name)
-            #prova_rf_2.plot_oob(to_export, all_cols, dataset_name)
-            RF_xai.rf_classification(to_export, all_cols, dataset_name)
+            prova_rf_2.plot_oob(to_export, all_cols, dataset_name)
+            #RF_xai.rf_classification(to_export, all_cols, dataset_name)
 
 
 

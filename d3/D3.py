@@ -1,6 +1,7 @@
-import numpy as np
-import pandas as pd
 import sklearn
+import sklearn.metrics as metrics
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
 
 from sklearn.metrics import roc_auc_score as AUC
 from progress.bar import IncrementalBar
@@ -61,8 +62,18 @@ def drift_detector(S, T, threshold):
         'y_test': y_test,
         'pred_probs': probs,
         'predictions': predictions,
-        'class_names': np.unique(y_train)
+        'class_names': np.unique(y_train),
+
+        'AUC': auc_score,
+        'Accuracy_train': clf.score(X_train, y_train),
+        'Accuracy_test': clf.score(X_test, y_test),
+        'Precision_post': precision_score(y_test, predictions),
+        'Recall_post': recall_score(y_test, predictions),
+        'F1_score_post': sklearn.metrics.f1_score(y_test, predictions)
     }
+
+
+
     # Signal drift if AUC is larger than the threshold
     if auc_score > threshold:
         return True, shap_dict

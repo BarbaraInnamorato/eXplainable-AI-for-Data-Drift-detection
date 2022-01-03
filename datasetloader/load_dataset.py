@@ -24,13 +24,6 @@ def read_data_electricity_market(foldername="data/", shuffle=False):
     # #sns.heatmap(cor, annot=True, cmap=plt.cm.Reds)
     # plt.title('pearson correlation for electricity dataset')
     # plt.savefig('images/pearson correlation for electricity dataset')
-    #
-    # # Sperman correlation
-    # plt.figure(figsize=(12,10))
-    # sp_corr = X.corr(method='spearman')
-    # sns.heatmap(sp_corr, annot=True, cmap=plt.cm.Reds)
-    # plt.title('sperman correlation for electricity dataset')
-    # plt.savefig('images/sperman correlation for electricity dataset')
 
     # Set x,y as numeric
     X = X.astype(float)
@@ -61,13 +54,14 @@ def read_data_weather(foldername="data/weather/", shuffle=False):
 
     y = df.iloc[:, -1:]  # 0,1
 
-    sns.countplot(y)
+    # sns.countplot(df['PRC'])
 
     # Add labels
-    plt.title('Countplot of Weather')
-    plt.xlabel('Precipitation')
-    plt.ylabel('Instances')
-    plt.show()
+    # plt.title('Countplot of Weather')
+    # plt.xlabel('Precipitation (PRC)')
+    # plt.ylabel('Instances')
+    # plt.savefig('Weather target')
+
     # Pearson correlation
     # plt.figure(figsize=(12, 10))
     # cor = X.corr()
@@ -76,13 +70,6 @@ def read_data_weather(foldername="data/weather/", shuffle=False):
     # sns.heatmap(cor, annot=True, cmap=plt.cm.Reds)
     # plt.title('pearson correlation for weather dataset')
     # plt.savefig('images/pearson correlation for weather dataset')
-    #
-    # # Sperman correlation
-    # plt.figure(figsize=(12,10))
-    # sp_corr = X.corr(method='spearman')
-    # sns.heatmap(sp_corr, annot=True, cmap=plt.cm.Reds)
-    # plt.title('sperman correlation for weather dataset')
-    # plt.savefig('images/sperman correlation for weather dataset')
 
     return X, y
 
@@ -102,13 +89,6 @@ def read_data_forest_cover_type(foldername="data/", shuffle=False):
     # sns.heatmap(cor, annot=True, cmap=plt.cm.Reds)
     # plt.title('pearson correlation for forestcover dataset')
     # plt.savefig(r'images/pearson correlation for forestcover dataset')
-    #
-    # # Sperman correlation
-    # plt.figure(figsize=(12,10))
-    # sp_corr = X.corr(method='spearman')
-    # sns.heatmap(sp_corr, annot=True, cmap=plt.cm.Reds)
-    # plt.title('sperman correlation for forestcover dataset')
-    # plt.savefig(r'images/sperman correlation for forestcover dataset.png')
 
     return X, y
 
@@ -128,14 +108,6 @@ def read_data_anas(foldername="data/", shuffle=False):
     # plt.savefig('images/pearson correlation for anas dataset')
     # pd_cor = pd.DataFrame(cor)
     # pd_cor.to_excel('other_files/'+ f'CORR_panama.xlsx')
-    #
-    # # Sperman correlation
-    # plt.figure(figsize=(12,10))
-    # sp_corr = X.corr(method='spearman')
-    # print(sp_corr)
-    # sns.heatmap(sp_corr, annot=True, cmap=plt.cm.Reds)
-    # plt.title('sperman correlation for anas dataset')
-    # plt.savefig('images/sperman correlation for anas dataset')
 
     return X, y
 

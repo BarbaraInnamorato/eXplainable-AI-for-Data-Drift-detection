@@ -141,6 +141,8 @@ def teacher_student_inference(drift_point, train_results):
         if adwin.detected_change():
             if i > drift_point:
                 print('-----------CONCEPT DRIFT ST -------------')
+                print('Change detected in data: ' + str(Xi[i]) + ' - at index: ' + str(i))
+
                 results['detected_drift_points'].append(i)
 
                 exp_dict = {
@@ -152,6 +154,7 @@ def teacher_student_inference(drift_point, train_results):
                     'student_error': student_error, #tra 0 e 1
                     'drifted': True,
                     'indice_riga': i,
+
                     'y hat student': y_hat_student,
                     'y_hat_teacher': y_hat_teacher,
                     'class_names': class_names,

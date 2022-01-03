@@ -80,12 +80,13 @@ def st_sp_lime(data_for_xai, all_cols, filename):
         print(diz)
         class_names = np.unique(diz['y_train'])
 
-        mode = None
+        mode = ''
         if filename == 'anas':
-            mode = 'regression'
+            mode += 'regression'
         else:
-            mode = 'classification'
+            mode += 'classification'
 
+        print('SP LIME MODE = ', mode)
         explainer_lime = lime.lime_tabular.LimeTabularExplainer(diz['X_train'],
                                                                 mode=mode,
                                                                 feature_names=all_cols,
@@ -114,6 +115,8 @@ def st_sp_lime(data_for_xai, all_cols, filename):
         print(f'---------------  LIME COVERAGE {filename}')
         print(len(sp_obj.sp_explanations) / len(sp_obj.explanations))
         print()
+        lime_coverage = len(sp_obj.sp_explanations) / len(sp_obj.explanations)
+        lime_coverage.to_excel(f'sp_lime/COVERAGE_LIME_D3_{filename}.xlsx')
 
         df = pd.DataFrame({})
         for this_label in range(len(class_names)):

@@ -396,16 +396,13 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
             model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # list of probs
             print('ST model output anas', model_output)
-            class_pred = np.argmax(abs(model_output))
+            #class_pred = np.argmax(abs(model_output))
 
             dizio = {'batch %s' % k: {'row %s' % k: {
                 'class_names': class_names,
-                'ST_prediction': pred,  # ST Predicted
-                'SHAP_probs': model_output,
-                'is ML correct': class_pred == pred,
-                'value_ordered': feat_shap_val,  # (feature, shap_value) : ordered list
-                'swapped': swap_shap,  # (feature, bool) : ordered list of swapped variables
-                'SHAP_prediction': class_pred,  # xai prediction : class
+                'ST_prediction': pred,              # ST Predicted
+                'value_ordered': feat_shap_val,     # (feature, shap_value) : ordered list
+                'swapped': swap_shap,               # (feature, bool) : ordered list of swapped variables
                 'shap_values': shap_values
             }}}
             ret_st.append(dizio)
@@ -477,12 +474,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         with open('results/' + 'ST_LIME_%s.json' % filename, 'w', encoding='utf-8') as f11:
             json.dump(lime_res_st, f11, cls=NumpyEncoder)
 
-        # with open('other_files/' + f"ST - SHAP - Total time {filename}", 'w', encoding='utf-8') as t9:
-        #     json.dump(time_shap, t9, cls=NumpyEncoder)
-        #
-        # with open('other_files/' + f"ST - LIME - Total time {filename}", 'w', encoding='utf-8') as t10:
-        #     json.dump(time_lime, t10, cls=NumpyEncoder)
-
         mean_time_shap = np.mean(time_shap)
         mean_time_lime = np.mean(time_lime)
         mean_time_anchor = np.mean(time_anchor)
@@ -493,8 +484,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         f.close()
         f11.close()
-        # t9.close()
-        # t10.close()
 
         #return ret, lime_res, anchor_res
 

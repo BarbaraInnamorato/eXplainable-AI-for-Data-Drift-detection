@@ -4,9 +4,7 @@ warnings.filterwarnings("ignore")
 import shap
 import lime
 import lime.lime_tabular
-#from anchor import anchor_tabular
 
-#import alibi
 from alibi.explainers import AnchorTabular
 
 import matplotlib.pyplot as plt
@@ -16,7 +14,8 @@ from numpyencoder import NumpyEncoder
 import pandas as pd
 import json
 import time
-import os
+import seaborn as sns
+import sklearn.metrics as metrics
 
 # Connect pandas with plotly
 import cufflinks as cf
@@ -53,22 +52,60 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     time_lime = []
     time_anchor = []
 
+    diz_shap = []
+    auc_values = []
+
     for diz in data_for_xai[-1:]:
+        print(diz)
+        diz_shap.append(diz)
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
         test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
-
         class_names = np.unique(diz['y_train'])
+        auc_values.append(diz['AUC'])
+
+        # Chek train and test distribution
+        tr = list(sns.countplot(diz['y_train']))
+        ts = list(sns.countplot(diz['y_test']))
+        x = np.arange(len(class_names))
+        width = 0.35
+        fig, ax = plt.subplots()
+        rects1 = ax.bar(x - width / 2, tr, width, label='Train')
+        rects2 = ax.bar(x + width / 2, ts, width, label='Test')
+
+        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.set_ylabel('Instances')
+        ax.set_title(f'Countplot of {filename} classes')
+        ax.set_xticks(x, class_names)
+        ax.legend()
+        ax.bar_label(rects1, padding=3)
+        ax.bar_label(rects2, padding=3)
+        fig.tight_layout()
+        plt.savefig('images/' + f'{filename} target distribution')
+
+        # Plotting ROC_AUC
+        fpr, tpr, threshold = metrics.roc_curve(diz['y_test'], diz['pred_probs'])
+        roc_auc = metrics.auc(fpr, tpr)
+        plt.title('Receiver Operating Characteristic (ROC)')
+        plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % roc_auc)
+        plt.legend(loc='lower right')
+        plt.plot([0, 1], [0, 1], 'r--')
+        plt.xlim([0, 1])
+        plt.ylim([0, 1])
+        plt.ylabel('True Positive Rate')
+        plt.xlabel('False Positive Rate')
+        plt.savefig('images/' + f'ROC_curve_{filename}')
 
         k = 0
 
-        d3_train_acc = diz['model'].score(train_set, diz['y_train'])
-        d3_test_acc = diz['model'].score(test_set, diz['y_test'])
-        #print("D3 train accuracy: %0.3f" % diz['model'].score(train_set, diz['y_train']))
-        #print("D3 test accuracy: %0.3f" % diz['model'].score(test_set, diz['y_test']))
+        #d3_train_acc = diz['model'].score(train_set, diz['y_train'])
+        #d3_test_acc = diz['model'].score(test_set, diz['y_test'])
+        #values = [d3_train_acc, d3_test_acc, diz['Precision_post'], diz['Recall_post'], diz['F1_score_post']]
 
+        values = [diz['Accuracy_train'], diz['Accuracy_test'], diz['Precision_post'], diz['Recall_post'], diz['F1_score_post']]
+        indice = ['train_accuracy, test_accuracy', 'Precision_post', 'Recall_post', 'F1_score_post']
 
-        d3_accuracy_df = pd.DataFrame([d3_train_acc, d3_test_acc], columns=['accuracy'])
-        d3_accuracy_df.to_excel(f'other_files/D3_acc_{filename}.xlsx')
+        d3_accuracy_df = pd.DataFrame(values, columns=['score'], index = indice)
+        d3_accuracy_df.to_excel(f'other_files/D3_ACCURACY_{filename}.xlsx')
 
         # Setting explainers
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
@@ -97,6 +134,15 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             pred = diz['predictions'][i]
             predict_proba = diz['model'].predict_proba(diz['X_test'][i].reshape(1, -1))[0]
 
+
+            # check balance predictions
+            sns.countplot(pred)
+
+            # Add labels
+            plt.title(f'Countplot of {filename}')
+            plt.xlabel(f'Predictions for {filename}')
+            plt.ylabel('Instances')
+            plt.savefig(f'{filename} predictions distribution')
 
             #############################  SHAP  ##############################
             '''
@@ -142,11 +188,9 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'class_names': class_names,
                 'd3_prediction': pred,                                          # D3 class predicted
                 'd3_pred_probs': predict_proba,                                 # D3 probs predicted
-                'SHAP_probs': model_output,
-                'is ML correct': class_pred == pred,
                 'value_ordered': feat_shap_val,                                 # (feature, shap_value) : ordered list
                 'swapped': swap_shap,                                           # (feature, bool) : ordered list of swapped variables
-                'shap_prediction': class_pred,                                  # xai prediction : class
+                #'shap_prediction': class_pred,                                  # xai prediction : class
                 'shap_values': shap_values
             }}}
             ret.append(dizio)
@@ -175,8 +219,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
 
-            lime_prediction = exp_lime.local_pred
-            lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
+            #lime_prediction = exp_lime.local_pred
+            #lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
             exp_lime.as_pyplot_figure().tight_layout()
             plt.savefig('images/' +f' D3 Local LIME row {str(i)} dataset {filename}')
             exp_lime.save_to_file('html_images/' + f'D3_lime_row_{str(i)}_dataset_{filename}.html')
@@ -212,9 +256,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'class_names': class_names,
                 'd3_prediction': pred,                                  # D3 prediction (LR)
                 'd3_pred_probs': predict_proba,                         # D3 prediction (LR)
-                'LIME_prediction': lime_class_pred,                     # xai prediction
-                'LIME_LOCAL_prediction': lime_prediction,           # xai prediction
-               # 'LIME_pred_probs': lime_probs,
                 'value_ordered': f_weight,                              # (feature, lime_weight)
                 'feature_value': variables,                             # (feature, real value)
                 'swapped': swap                                         # (feature, bool)
@@ -251,8 +292,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 else:
                     contrib.append(
                         'empty rule: all neighbors have the same label')  # al primo batch potrebbe essere vuoto
-
-
             else:
                 for s in rules:  # nel caso in cui ci siano più predicati
 
@@ -291,7 +330,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'class_names': class_names,
                 'd3_prediction': pred,
                 'd3_pred_probs': predict_proba,
-                'Anchor_prediction': pred_uno,
+                #'Anchor_prediction': pred_uno,
                 'rule': ' AND '.join(exp_anchor.anchor),
                 'precision': precision,
                 'coverage': coverage,
@@ -320,6 +359,10 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
     with open('results/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
+
+    with open('results/' + 'd3_diz_%s.json' % filename, 'w', encoding='utf-8') as ff0:
+        json.dump(diz_shap, ff0, cls=NumpyEncoder)
+
 
     #return ret, anchor_res, lime_res
 
@@ -355,11 +398,14 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     time_lime = []
     time_anchor = []
 
+    student_error = []
+
     for diz in data_for_xai:
         print('---- ST ------')
         print(diz)
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
         test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
+        student_error.append(diz['student_error'])
 
         class_names = np.unique(diz['y_train'])
 
@@ -429,12 +475,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             'class_names': class_names,
             'ST_prediction': pred,
             'ST_pred_probs': predict_proba,             # ST prediction
-            'is ML correct': class_pred == pred,
-            'SHAP_prediction': class_pred,
             'value_ordered': feat_shap_val,             # (feature, shap_value)
             'swapped': swap_shap,                       # (feature, bool),
-            'SHAP_probs': model_output,                 # xai prediction
-            'shap_values' : shap_values
+            'shap_values': shap_values
         }}}
         ret_st.append(dizio)
 
@@ -491,8 +534,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             'class_names': class_names,
             'ST_prediction': pred,                              # ST prediction
             'ST_pred_probs': predict_proba,                     # ST predicted probs
-            'LIME_LOCAL_prediction': lime_prediction,       # xai prediction
-            'LIME_prediction': lime_class_pred,                 # xai prediction
             'value_ordered': f_weight,                          # (feature, lime_weight)
             'feature_value': variables,                         # (feature, real value)
             'swapped': swap                                     # (feature, bool)
@@ -503,9 +544,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         ################### ANCHORS #########################################
         start_time_anch = time.time()
-        class_list_str = ['0', '1']
-        pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][0].reshape(1, -1))[0]]
-        print('ALIBI PREDICTION', pred_uno)
+        #class_list_str = ['0', '1']
+        #pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][0].reshape(1, -1))]
+        #print('ALIBI PREDICTION', pred_uno)
 
         exp_anchor = explainer_anchor.explain(diz['X_test'][0],
                                               threshold=0.90,
@@ -562,9 +603,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         diz_anchors = {'batch %s' % k: {'row %s' % k: {
             'class_names': class_names,
-            'ML_prediction': pred,                       # ST prediction
-            'ML_pred_probs': predict_proba,              # ST predicted proba
-            'Anchor_prediction': pred_uno,
+            'ST_prediction': pred,                       # ST prediction
+            'ST_pred_probs': predict_proba,              # ST predicted proba
+           # 'Anchor_prediction': pred_uno,
             'rule': ' AND '.join(exp_anchor.anchor),
             'precision': precision,
             'coverage': coverage,

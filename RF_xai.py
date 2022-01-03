@@ -1,11 +1,13 @@
 import pandas as pd
 import shap
-
+import seaborn as sns
 import sklearn
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
 
 
 import numpy as np
@@ -71,14 +73,17 @@ def rf_classification(to_export, all_cols, filename):
         else:
             avg += 'weighted'
 
-        # F1-score on test set before the drift point
         pred_test_pre = rfc.predict(to_export['X_test_pre'])
-        score_test_pre = sklearn.metrics.f1_score(to_export['y_test_pre'], pred_test_pre, average=avg)
-
-        # F1-score on test set after the drift point
         pred_test_post = rfc.predict(to_export['X_test_post'])
-        print('pred_test_post',pred_test_post)
-        score_test_post = sklearn.metrics.f1_score(to_export['y_test_post'], pred_test_post, average=avg)
+
+        # check balance predictions
+        sns.countplot(pred_test_post)
+
+        # Add labels
+        plt.title(f'RandomForest Countplot of {filename}')
+        plt.xlabel(f'RandomForest Predictions for {filename}')
+        plt.ylabel('Instances')
+        plt.savefig(f'{filename}- RandomForest predictions distribution')
 
         # Global explanation for the performance of RANDOM FOREST
         sample_train = shap.sample(to_export['X_train'], nsamples=10, random_state=90)  # nsamples=100
@@ -107,6 +112,9 @@ def rf_classification(to_export, all_cols, filename):
 
         #shap.summary_plot(shap_values[class_pred], to_export['X_test_post'], feature_names=all_cols, plot_type='dot',show=False)
 
+        print('Classification report')
+        print(classification_report(to_export['y_test_post'],pred_test_post))
+
 
         diz_rf_cl = {"shap prediction": class_pred,
                      "RF train accuracy": rfc.score(to_export['X_train'], to_export['y_train']),
@@ -116,8 +124,15 @@ def rf_classification(to_export, all_cols, filename):
                      "RF test POST drift accuracy": rfc.score(to_export['X_test_post'], to_export['y_test_post']),
                      'Random Forest Classification report POST drift': classification_report(to_export['y_test_post'],pred_test_post),
                     # 'Random Forest feature importance': importances,
-                     'F1_score_pre': score_test_pre,
-                     'F1_score_post': score_test_post,
+                     'Precision_pre': precision_score(to_export['y_test_pre'], pred_test_pre, average='weighted')  ,
+                     'Precision_post': precision_score(to_export['y_test_post'], pred_test_post, average='weighted'),
+
+                     'Recall_pre': recall_score(to_export['y_test_pre'], pred_test_pre, average='weighted'),
+                     'Recall_post': recall_score(to_export['y_test_post'], pred_test_post, average='weighted'),
+
+                     'F1_score_pre': sklearn.metrics.f1_score(to_export['y_test_pre'], pred_test_pre, average=avg),
+                     'F1_score_post': sklearn.metrics.f1_score(to_export['y_test_post'], pred_test_post, average=avg),
+
                      'time': tot_time
                      }
 
@@ -162,13 +177,10 @@ def rf_classification(to_export, all_cols, filename):
                   'Mean Absolute Error (MAE):': metrics.mean_absolute_error(to_export['y_test_post'], prediction_post),
                   'Mean Squared Error (MSE):': metrics.mean_squared_error(to_export['y_test_post'], prediction_post),
                   'Root Mean Squared Error (RMSE):': metrics.mean_squared_error(to_export['y_test_post'], prediction_post, squared=False),
-                  'Mean Absolute Percentage Error (MAPE):': metrics.mean_absolute_percentage_error(to_export['y_test_post'], prediction_post),
-                  'Explained Variance Score:': metrics.explained_variance_score(to_export['y_test_post'], prediction_post),
+                 # 'Mean Absolute Percentage Error (MAPE):': metrics.mean_absolute_percentage_error(to_export['y_test_post'], prediction_post),
                   'Max Error:': metrics.max_error(to_export['y_test_post'], prediction_post),
-                  'Mean Squared Log Error:': metrics.mean_squared_log_error(to_export['y_test_post'], prediction_post),
-                  'Median Absolute Error:': metrics.median_absolute_error(to_export['y_test_post'], prediction_post),
+                 # 'Median Absolute Error:': metrics.median_absolute_error(to_export['y_test_post'], prediction_post),
                   'R^2:': metrics.r2_score(to_export['y_test_post'], prediction_post),
-                  'Mean Poisson Deviance:': metrics.mean_poisson_deviance(to_export['y_test_post'], prediction_post),
                   'time': end_time
 
                   }
