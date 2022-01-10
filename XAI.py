@@ -4,26 +4,19 @@ warnings.filterwarnings("ignore")
 import shap
 import lime
 import lime.lime_tabular
-
 from alibi.explainers import AnchorTabular
-
 import matplotlib.pyplot as plt
 import numpy as np
 from numpyencoder import NumpyEncoder
-
 import pandas as pd
 import json
 import time
-import seaborn as sns
-import sklearn.metrics as metrics
 
 # Connect pandas with plotly
-import cufflinks as cf
-cf.go_offline()
-from plotly.offline import init_notebook_mode
-init_notebook_mode(connected='true')
-
-
+# import cufflinks as cf
+# cf.go_offline()
+# from plotly.offline import init_notebook_mode
+# init_notebook_mode(connected='true')
 
 first_time = time.time() # returns the processor time
 
@@ -55,62 +48,26 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     diz_shap = []
     auc_values = []
 
-    for diz in data_for_xai[-1:]:
-        print(diz)
+    for diz in data_for_xai[-1:][:20]:
         diz_shap.append(diz)
+
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
         test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
         class_names = np.unique(diz['y_train'])
         auc_values.append(diz['AUC'])
 
-        # Chek train and test distribution
-        tr = list(sns.countplot(diz['y_train']))
-        ts = list(sns.countplot(diz['y_test']))
-        x = np.arange(len(class_names))
-        width = 0.35
-        fig, ax = plt.subplots()
-        rects1 = ax.bar(x - width / 2, tr, width, label='Train')
-        rects2 = ax.bar(x + width / 2, ts, width, label='Test')
-
-        # Add some text for labels, title and custom x-axis tick labels, etc.
-        ax.set_ylabel('Instances')
-        ax.set_title(f'Countplot of {filename} classes')
-        ax.set_xticks(x, class_names)
-        ax.legend()
-        ax.bar_label(rects1, padding=3)
-        ax.bar_label(rects2, padding=3)
-        fig.tight_layout()
-        plt.savefig('images/' + f'{filename} target distribution')
-
-        # Plotting ROC_AUC
-        fpr, tpr, threshold = metrics.roc_curve(diz['y_test'], diz['pred_probs'])
-        roc_auc = metrics.auc(fpr, tpr)
-        plt.title('Receiver Operating Characteristic (ROC)')
-        plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % roc_auc)
-        plt.legend(loc='lower right')
-        plt.plot([0, 1], [0, 1], 'r--')
-        plt.xlim([0, 1])
-        plt.ylim([0, 1])
-        plt.ylabel('True Positive Rate')
-        plt.xlabel('False Positive Rate')
-        plt.savefig('images/' + f'ROC_curve_{filename}')
-
         k = 0
 
-        #d3_train_acc = diz['model'].score(train_set, diz['y_train'])
-        #d3_test_acc = diz['model'].score(test_set, diz['y_test'])
-        #values = [d3_train_acc, d3_test_acc, diz['Precision_post'], diz['Recall_post'], diz['F1_score_post']]
-
-        values = [diz['Accuracy_train'], diz['Accuracy_test'], diz['Precision_post'], diz['Recall_post'], diz['F1_score_post']]
-        indice = ['train_accuracy, test_accuracy', 'Precision_post', 'Recall_post', 'F1_score_post']
-
-        d3_accuracy_df = pd.DataFrame(values, columns=['score'], index = indice)
+        acc_tr, acc_test, prec_post, rec_post, f_post = diz['Accuracy_train'], diz['Accuracy_test'], diz['Precision_post'], diz['Recall_post'], diz['F1_score_post']
+        name = ['train_accuracy', 'test_accuracy', 'Precision_post', 'Recall_post', 'F1_score_post']
+        d3_accuracy_df = pd.DataFrame([acc_tr, acc_test, prec_post, rec_post, f_post], index = name)
         d3_accuracy_df.to_excel(f'other_files/D3_ACCURACY_{filename}.xlsx')
 
         # Setting explainers
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
-                                              train_set,
-                                              nsamples=100,
+                                              #train_set,
+                                              #nsamples=100,
+                                              shap.sample(train_set, nsamples=100, random_state=90),
                                               random_state=90,
                                               link='identity',
                                               l1_reg=len(all_cols)
@@ -123,63 +80,37 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                                 discretize_continuous=True,
                                                                 discretizer='quartile',
                                                                 verbose=True)
-
-
-        predict_fn = lambda x:diz['model'].predict(x)
+        predict_fn = lambda x : diz['model'].predict(x)
         explainer_anchor = AnchorTabular(predict_fn, all_cols)
         explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
 
         # Start explanations
-        for i in range(len(diz['X_test'])):  # da 0 a 66-1
+        for i in range(len(diz['X_test'])):
             pred = diz['predictions'][i]
             predict_proba = diz['model'].predict_proba(diz['X_test'][i].reshape(1, -1))[0]
 
-
-            # check balance predictions
-            sns.countplot(pred)
-
-            # Add labels
-            plt.title(f'Countplot of {filename}')
-            plt.xlabel(f'Predictions for {filename}')
-            plt.ylabel('Instances')
-            plt.savefig(f'{filename} predictions distribution')
-
-            #############################  SHAP  ##############################
-            '''
-            - le variabili con shap value negativo dovrebbero essere quelle che spingono verso zero 
-            - feat_shap_val: le variabili sono ordinate in base al valore assoluto del rispettivo shap value
-            - più lo shap_value in valore è assoluto è alto, più la variabile è importante 
-            # mean = sum(abs(tup[0]) for tup in ordered_shap_list)/len(ordered_shap_list)
-            '''
+            # SHAP
             start_time_sh = time.time()
             shap_values = explainer_shap.shap_values(test_set.iloc[i, :])
             end_time_shap = (time.time() - start_time_sh) / 60
-            #time_shap1 = f"D3 - SHAP - Total time {filename}: {end_time_shap} minutes"
-
-            # print(f"D3 - SHAP - Total time {filename}: {(time.time() - start_time) / 60} minutes")
-            #time_shap.append({'start':start_time_sh, 'time':end_time_shap,'time_string': time_shap1, 'iter':i})
             time_shap.append(end_time_shap)
-            model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4) #list of probs
-            class_pred = np.argmax(abs(model_output))
-            print(f'SHAP model output {filename}', model_output)
-            print('shap_val sum', np.sum(shap_values))
-            print(f'SHAP VALUES {filename}', shap_values)
-
-            # questo mo_output è l'output della black-box
-            mo_output = (explainer_shap.expected_value[class_pred] + shap_values[class_pred].sum()).round(4)
-            print('mo output', mo_output)
 
             zipped = list(zip(shap_values[pred], all_cols))
             ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
 
             # Get the force plot for each row
             shap.initjs()
-            fig = plt.figure(figsize = (20,8))
-            fig.set_figheight(6)
-            shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred],test_set.iloc[i,:], link = 'logit',feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
+            #fig = plt.figure(figsize = (20,10))
+            #fig.set_figheight(6)
+            shap.plots.force(explainer_shap.expected_value[1], shap_values[1],test_set.iloc[i,:], link = 'logit',feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
             plt.tight_layout()
             plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
 
+            # print(f'D3 SHAP SUMMARY DOT {filename}')
+            # shap.summary_plot(shap_values[1], to_export['X_test_post'], show=False)
+            # plt.title(f'RF SHAP summary plot {filename}')
+            # fig.tight_layout()
+            # fig.savefig(f'images/BAR_D3_Summary_plot_{filename}')
 
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], round(tup[0], 3)) for tup in ordered_shap_list]
@@ -190,19 +121,11 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                 'd3_pred_probs': predict_proba,                                 # D3 probs predicted
                 'value_ordered': feat_shap_val,                                 # (feature, shap_value) : ordered list
                 'swapped': swap_shap,                                           # (feature, bool) : ordered list of swapped variables
-                #'shap_prediction': class_pred,                                  # xai prediction : class
                 'shap_values': shap_values
             }}}
             ret.append(dizio)
 
-
-            #############################  LIME  ###########################
-            '''
-            - le variabili con |weight| sono quelle più determinati per la prediction del ML model
-            - feature_weight_sorted: le variabili sono ordinate in base al valore assoluto del rispettivo peso calcolato con lime
-            - feature_value: valore reale del feature nella riga considerata
-            # mean = round(sum(abs(tup[1]) for tup in big_lime_list)/len(big_lime_list),3)
-            '''
+            # LIME 
             start_time_lime = time.time()
             exp_lime = explainer_lime.explain_instance(diz['X_test'][i],
                                                        diz['model'].predict_proba,
@@ -210,11 +133,9 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                        num_features=len(all_cols),
                                                        distance_metric='euclidean')  # provare anche una distanza diversa
 
-            ###
+            
             tot_lime = time.time() - start_time_lime
             time_lime.append(tot_lime)
-            #time_lime1 = f"D3 - LIME - Total time: {(time.time() - start_time_lime) / 60} minutes"
-            #print(f"D3 - LIME - Total time: {(time.time() - start_time) / 60} minutes")
 
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
@@ -264,11 +185,8 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             lime_res.append(lime_diz)
 
 
-            #############################  ANCHORS  ###########################
+            # ANCHORS
             start_time_anchor = time.time()
-            class_list_str = ['0', '1']
-            pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][i].reshape(1, -1))[0]]
-            print('ALIBI PREDICTION', pred_uno)
 
             exp_anchor = explainer_anchor.explain(diz['X_test'][i],
                                                   threshold=0.90,
@@ -276,7 +194,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                   coverage_samples=1000)
             end_time_a = time.time() - start_time_anchor
             time_anchor.append(end_time_a)
-            print('ALIBI EXPLANATION', exp_anchor)
+            print('\n ALIBI EXPLANATION \n', exp_anchor)
 
             rules = exp_anchor.anchor
             print('RULES', rules)
@@ -348,7 +266,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     index = ['mean_time_shap', 'mean_time_lime', 'mean_time_anchor']
     means = [mean_time_shap, mean_time_lime, mean_time_anchor]
     to_export = pd.DataFrame(means, columns=['mean time'], index=index)
-    to_export.to_excel(f'other_files/D3 {filename}.xlsx')
+    to_export.to_excel(f'other_files/D3_TIME_{filename}.xlsx')
 
     # D3 FILES
     with open('results/' + 'D3_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:
@@ -357,11 +275,11 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     with open('results/' + 'D3_LIME_%s.json' % filename, 'w', encoding='utf-8') as f1:
         json.dump(lime_res, f1, cls=NumpyEncoder)
 
-    with open('results/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
+    with open('other_files/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
 
-    with open('results/' + 'd3_diz_%s.json' % filename, 'w', encoding='utf-8') as ff0:
-        json.dump(diz_shap, ff0, cls=NumpyEncoder)
+    #with open('other_files/' + 'd3_diz_%s.json' % filename, 'w', encoding='utf-8') as ff0:
+    #    json.dump(diz_shap, ff0, cls=NumpyEncoder)
 
 
     #return ret, anchor_res, lime_res
@@ -411,7 +329,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
                                               shap.sample(train_set, nsamples=100, random_state=90),
-                                              link='identity',
+                                              #link='identity',
+                                              link='logit',
                                               l1_reg = len(all_cols)
                                               )
 
@@ -424,8 +343,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                 discretizer='quartile',
                                                                 verbose=True
                                                                 )
-
-
         predict_fn = lambda x: diz['model'].predict(x)
         explainer_anchor = AnchorTabular(predict_fn, all_cols)
         explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
@@ -433,35 +350,21 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         pred = int(diz['class_student'])
         predict_proba = diz['model'].predict_proba(diz['X_test'][0].reshape(1, -1))[0]  # default: l2 penalty = ridge regression
 
-        #############################  SHAP  ##############################
-        '''
-        - le variabili con shap value negativo dovrebbero essere quelle che spingono verso zero 
-        - feat_shap_val: le variabili sono ordinate in base al valore assoluto del rispettivo shap value
-        - più lo shap_value in valore è assoluto è alto, più la variabile è importante 
-        - #mean = sum(abs(tup[0]) for tup in ordered_shap_list)/len(ordered_shap_list)
-
-        '''
+        # SHAP
         start_time = time.time()
         print('ST SHAP sto calcolando shap values')
         shap_values = explainer_shap.shap_values(test_set) # test set è una riga
         end_time_shap = (time.time() - start_time) / 60
         time_shap.append(end_time_shap)
 
-        #expected_values = list(explainer_shap.expected_value)
         print(f'ST shap values {filename}', shap_values)
-        model_output = (explainer_shap.expected_value + shap_values[pred].sum()).round(4)
-        class_pred = np.argmax(abs(model_output))
-        print('model output', model_output)
-        print('shap_val sum', np.sum(shap_values))
 
-        zipped = list(zip(shap_values[class_pred][0], all_cols))
+        zipped = list(zip(shap_values[1][0], all_cols))
         ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
-
 
         # Get the force plot for each row
         shap.initjs()
-        fig = plt.figure(figsize=(20, 8))
-        shap.plots.force(explainer_shap.expected_value[class_pred], shap_values[class_pred], test_set, link='logit', feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
+        shap.plots.force(explainer_shap.expected_value[1], shap_values[1], test_set, link='logit', feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
         name = f'ST Local SHAP row {str(k)}, dataset {filename}'
         plt.title(f'Local SHAP row {str(k)} dataset {filename}')
         plt.tight_layout()
@@ -469,7 +372,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
         feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
-        #model_output = (explainer_shap.expected_value[pred] + shap_values[0].sum()).round(4)
 
         dizio = {'batch %s' % k: {'row %s' % k: {
             'class_names': class_names,
@@ -481,7 +383,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         }}}
         ret_st.append(dizio)
 
-        ############################### LIME ################################
+        # LIME
         start_time_lime = time.time()
         exp_lime = explainer_lime.explain_instance(diz['X_test'][0],
                                                    diz['model'].predict_proba,
@@ -490,13 +392,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         tot_lime = time.time() - start_time_lime
         time_lime.append(tot_lime)
 
-        #time_lime2 = f"Total time: {(time.time() - start_time) / 60} minutes"
-        #lime_probs = list(exp_lime.predict_proba)  # prob of being in class 0 or in class 1
-
         big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
         ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
         lime_prediction = exp_lime.local_pred
-        lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
+        #lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
         exp_lime.as_pyplot_figure().tight_layout()
         plt.text(0.3, 0.7, f' D3 Local LIME row {str(k)}')
         plt.savefig('images/' + f' ST Local LIME row {str(k)} dataset {filename}')
@@ -542,19 +441,15 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         lime_res_st.append(lime_diz)
 
-        ################### ANCHORS #########################################
+        # ANCHORS
         start_time_anch = time.time()
-        #class_list_str = ['0', '1']
-        #pred_uno = class_list_str[explainer_anchor.predictor(diz['X_test'][0].reshape(1, -1))]
-        #print('ALIBI PREDICTION', pred_uno)
-
         exp_anchor = explainer_anchor.explain(diz['X_test'][0],
                                               threshold=0.90,
                                               beam_size=len(all_cols),
                                               coverage_samples=1000)
         end_time_a = time.time() - start_time_anch
         time_anchor.append(end_time_a)
-        print('ALIBI EXPLANATION', exp_anchor)
+        print('\n ALIBI EXPLANATION \n', exp_anchor)
 
         rules = exp_anchor.anchor
         print('RULES', rules)
@@ -623,7 +518,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     index = ['mean_time_shap', 'mean_time_lime', 'mean_time_anchor']
     means = [mean_time_shap,mean_time_lime,mean_time_anchor]
     to_export = pd.DataFrame(means, columns=['mean time'], index=index)
-    to_export.to_excel(f'other_files/ST_{filename}.xlsx')
+    to_export.to_excel(f'other_files/ST_TIME_{filename}.xlsx')
 
     # ST FILES
     with open('results/' + 'ST_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:

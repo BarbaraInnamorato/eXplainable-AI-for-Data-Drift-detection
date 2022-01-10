@@ -99,13 +99,13 @@ def st_sp_lime(data_for_xai, all_cols, filename):
         sp_obj = submodular_pick.SubmodularPick(data=diz['X_test'],
                                                 explainer=explainer_lime,
                                                 num_features=len(all_cols),
-                                                predict_fn=diz['model'].predict_proba,
+                                                predict_fn=diz['model'].predict,
                                                 # num_exps_desired=10,
                                                 sample_size=20,
                                                 top_labels=len(class_names)
                                                 )
         # Plot the 10 explanations
-        [exp.as_pyplot_figure().savefig('images/' + f'SP_LIME_{filename}') for exp in
+        [exp.as_pyplot_figure().savefig('images/' + f'SP_LIME_ST{filename}') for exp in
          sp_obj.sp_explanations]
 
         # sp_explanations: A list of explanation objects that has a high coverage
@@ -116,7 +116,7 @@ def st_sp_lime(data_for_xai, all_cols, filename):
         print(len(sp_obj.sp_explanations) / len(sp_obj.explanations))
         print()
         lime_coverage = len(sp_obj.sp_explanations) / len(sp_obj.explanations)
-        lime_coverage.to_excel(f'sp_lime/COVERAGE_LIME_D3_{filename}.xlsx')
+        #lime_coverage.to_excel(f'sp_lime/COVERAGE_LIME_ST_{filename}.xlsx')
 
         df = pd.DataFrame({})
         for this_label in range(len(class_names)):
@@ -132,7 +132,7 @@ def st_sp_lime(data_for_xai, all_cols, filename):
             # dftest=pd.DataFrame(dfl)
             df = df.append(
                 pd.DataFrame(dfl, index=[class_names[this_label] for i in range(len(sp_obj.sp_explanations))]))
-            df.to_excel(f'sp_lime/SP_LIME_D3_{filename}.xlsx')
+            df.to_excel(f'sp_lime/SP_LIME_ST_{filename}.xlsx')
 
 
 

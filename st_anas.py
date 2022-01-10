@@ -345,8 +345,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
 
             class_names = np.unique(diz['y_train'])
-            # Setting explainers
 
+            # Setting explainers
             explainer_shap = shap.KernelExplainer(diz['model'].predict,
                                                   shap.sample(train_set, nsamples=100, random_state=90),
                                                   link = 'identity',
@@ -358,7 +358,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                     feature_names=all_cols,
                                                                     feature_selection='none',
                                                                     discretize_continuous=True,
-                                                                    #verbose=True
+                                                                    verbose=True
                                                                     )
 
             predict_fn = lambda x: diz['model'].predict(x)
@@ -368,14 +368,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             pred = diz['probs_student']
 
             #############################  SHAP  ##############################
-            '''
-            - le variabili con shap value negativo dovrebbero essere quelle che spingono verso zero 
-            - feat_shap_val: le variabili sono ordinate in base al valore assoluto del rispettivo shap value
-            - più lo shap_value in valore è assoluto è alto, più la variabile è importante 
-            - #mean = sum(abs(tup[0]) for tup in ordered_shap_list)/len(ordered_shap_list)
-
-            '''
-
             start_time_s = time.time()
             print('ST SHAP sto calcolando shap values')
             shap_values = explainer_shap.shap_values(test_set,  nsamples=100)  # test set è una riga
@@ -396,7 +388,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
             model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # list of probs
             print('ST model output anas', model_output)
-            #class_pred = np.argmax(abs(model_output))
 
             dizio = {'batch %s' % k: {'row %s' % k: {
                 'class_names': class_names,
@@ -480,7 +471,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         index = ['mean_time_shap', 'mean_time_lime', 'mean_time_anchor']
         means = [mean_time_shap, mean_time_lime, mean_time_anchor]
         to_export = pd.DataFrame(means, columns=['mean time'], index=index)
-        to_export.to_excel(f'other_files/ST {filename}.xlsx')
+        to_export.to_excel(f'other_files/ST_TIME_{filename}.xlsx')
 
         f.close()
         f11.close()
@@ -488,4 +479,4 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         #return ret, lime_res, anchor_res
 
 print(f"xai_anas.py Total time: {(time.time() - first_time) / 60} minutes")
-print('END xai_anas')
+print('END st_anas')

@@ -11,16 +11,17 @@ from d3.D3 import *
 # XAI techniques
 import XAI
 import st_anas
-import RF_xai
 import SP_LIME
-import prova_rf_2
+
+# Monitoring system
+import RandomForest
 
 # Utilities
 from progress.bar import IncrementalBar
 import time
 import os
 
-# XAI Performace computation
+# XAI Performance computation
 import performance
 
 # Create directories
@@ -38,11 +39,11 @@ if not os.path.exists('other_files'):
 
 
 # Setup
-models = ['d3', 'student-teacher']
-#models = ['student-teacher']
+#models = ['d3', 'student-teacher']
+models = ['student-teacher']
 
 
-n_repetitions = 1  # se lascio 1 poi devo togliere tutti i for
+n_repetitions = 1
 
 print('START')
 print('-----')
@@ -55,6 +56,7 @@ def faicose_un_dataset(dataset_name):
     streams = []
     real_drift_points = []
     drift_point = 0
+
 
     # Drift Injection and Stream Creation
     for i in range(n_repetitions):
@@ -91,7 +93,7 @@ def faicose_un_dataset(dataset_name):
     anas_results = {m: [] for m in models}
 
     inference_functions = {
-        'd3': d3_inference(drift_point, train_results),
+       # 'd3': d3_inference(drift_point, train_results),
         'student-teacher': teacher_student_inference(drift_point,train_results)
         }
 
@@ -100,7 +102,6 @@ def faicose_un_dataset(dataset_name):
         print('r', r)
         r['drift_point'] = real_drift_points[idx]
         print("Iteration {}".format(ii))
-
     
         for m in models:
             print('model fitting',m)
@@ -117,11 +118,11 @@ def faicose_un_dataset(dataset_name):
     # data for xai
     if dataset_name in ['anas']:
         anas_st = anas_results['student-teacher'][0]
-        anas_d3 = anas_results['d3'][0]
-        XAI.d3_xai(anas_d3, cols_to_print, all_cols, dataset_name)
+        #anas_d3 = anas_results['d3'][0]
+        #XAI.d3_xai(anas_d3, cols_to_print, all_cols, dataset_name)
         st_anas.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
-        SP_LIME.sp_lime(anas_d3, all_cols, dataset_name)
-        SP_LIME.sp_lime(anas_st, all_cols, dataset_name)
+        #SP_LIME.sp_lime(anas_d3, all_cols, dataset_name)
+        SP_LIME.st_sp_lime(anas_st, all_cols, dataset_name)
 
     else:
         st = inf_results['student-teacher'][0]
@@ -131,7 +132,7 @@ def faicose_un_dataset(dataset_name):
         SP_LIME.sp_lime(d3, all_cols, dataset_name)
         SP_LIME.st_sp_lime(st, all_cols, dataset_name)
 
-
+    """
     # Monitoring data - PERFORM RANDOM FOREST (REGRESSION/CLASSIFICATION)
     for idx, s in enumerate(streams):
         n_train = train_results[idx]['n_train']
@@ -151,23 +152,21 @@ def faicose_un_dataset(dataset_name):
 
         if dataset_name in ['anas']:
             print('----------RANDOM FOREST %s'%dataset_name)
-            prova_rf_2.plot_oob_regression(to_export, all_cols, dataset_name)
-            #RF_xai.rf_regression(to_export, all_cols, dataset_name)
+            RandomForest.plot_oob_regression(to_export, all_cols, dataset_name)
         else:
             print('----------RANDOM FOREST CLASSIFICATION %s'%dataset_name)
-            prova_rf_2.plot_oob(to_export, all_cols, dataset_name)
-            #RF_xai.rf_classification(to_export, all_cols, dataset_name)
+            RandomForest.plot_oob(to_export, all_cols, dataset_name)
 
-
+    """
 
 def execute_main():
 
     print("Starting 'execute_main'")
     # creating processes
-    p1 = mp.Process(target=faicose_un_dataset, args=('electricity',))
+    p1 = mp.Process(target=faicose_un_dataset, args=('anas',))
     # p2 = mp.Process(target=faicose_un_dataset, args=('weather',))
     # p3 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
-    # p4 = mp.Process(target=faicose_un_dataset, args=('anas',))
+    # p4 = mp.Process(target=faicose_un_dataset, args=('electricity',))
 
     # starting processes
     print(p1.start())
@@ -198,7 +197,7 @@ def execute_main():
     # print("Process p4 is alive: {}".format(p4.is_alive()))
 
     # Performances Computation (outside the for: takes files from results folder)
-    performance.read_files()
+    #performance.read_files()
 
 
 

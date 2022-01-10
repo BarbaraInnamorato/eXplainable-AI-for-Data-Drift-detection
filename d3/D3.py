@@ -6,6 +6,7 @@ from sklearn.metrics import recall_score
 from sklearn.metrics import roc_auc_score as AUC
 from progress.bar import IncrementalBar
 from sklearn.linear_model import LogisticRegression
+from collections import Counter
 
 from datasetloader.load_dataset import *
 
@@ -40,13 +41,21 @@ def drift_detector(S, T, threshold):
     clf = LogisticRegression(solver='liblinear')
     # clf = svm.SVC(probability = True, class_weight = 'balanced')
     # clf = DecisionTreeClassifier()
-    #predictions = np.zeros(labels.shape)
 
     # Divide ST into two equal chunks
     # Train LR on a chunk and classify the other chunk
     # Calculate AUC for original labels (in_target) and predicted ones
-    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(ST, labels, test_size=0.2,
-                                                                                random_state=123, stratify=labels)
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(ST, labels,
+                                                                                test_size=0.2,
+                                                                                random_state=123,
+                                                                                stratify=labels
+                                                                                )
+
+    class_names = np.unique(y_train)
+
+    tr = Counter(y_train)
+    ts = Counter(y_test)
+    print(' train', tr, '||', 'test', ts)
 
     clf.fit(X_train, y_train)
     probs = clf.predict_proba(X_test)[:, 1]
@@ -62,7 +71,7 @@ def drift_detector(S, T, threshold):
         'y_test': y_test,
         'pred_probs': probs,
         'predictions': predictions,
-        'class_names': np.unique(y_train),
+        'class_names': class_names,
 
         'AUC': auc_score,
         'Accuracy_train': clf.score(X_train, y_train),
@@ -71,8 +80,6 @@ def drift_detector(S, T, threshold):
         'Recall_post': recall_score(y_test, predictions),
         'F1_score_post': sklearn.metrics.f1_score(y_test, predictions)
     }
-
-
 
     # Signal drift if AUC is larger than the threshold
     if auc_score > threshold:
@@ -83,7 +90,7 @@ def drift_detector(S, T, threshold):
 
 class D3():
 
-    def __init__(self, dim, auc=0.7, w=100, rho=0.1):
+    def __init__(self, dim, auc=0.9, w=500, rho=0.1):
         """
         Parameters
         ----------
@@ -146,14 +153,12 @@ class D3():
         return self.win_label[:self.window_index]
 
 
-def d3_inference(drift_point,train_results, win_lenght=100, rho=0.1, auc_score=0.7):
+def d3_inference(drift_point, train_results, win_lenght=500, rho=0.1, auc_score=0.9):
 
-    #print('train res', train_results[0])
     n_train = int(train_results[0]["n_train"])
     stream = train_results[0]["Stream"]
     X_train = train_results[0]["X_train"]
     y_train = train_results[0]['y_train']  # for random forest
-
 
     stream.restart()
     stream.next_sample(n_train)
@@ -180,8 +185,6 @@ def d3_inference(drift_point,train_results, win_lenght=100, rho=0.1, auc_score=0
                     print('---------------------CONCEPT DRIFT after drifted row----------------\n')
                     results['detected_drift_points'].append(i)
                     list_shap_dict.append(shap_dict)
-
-
                 else:
                     print('---------------------FALSE ALARM----------------------------------\n')
             else:
