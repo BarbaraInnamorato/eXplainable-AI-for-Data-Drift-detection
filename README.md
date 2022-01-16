@@ -27,16 +27,18 @@ Execution order
     st_xai function to explain predictions of ST algorithm
     write json file saved into 'results' folder (not for anchors)
 
-6 - **xai_anas.py** --> SHAP, LIME, ANCHORS for anas dataset
+6 - **st_anas.py** --> SHAP, LIME, ANCHORS for anas dataset
     *REGRESSION ONLY, ST ONLY*
     st_xai function to explain predictions of ST algorithm
     write json file saved into 'results' folder (not for anchors)
 
-7 - **RF_xai.py** : Monitoring with Random Forest - for all dataset
+7 - **RandomForest.py** : Monitoring with Random Forest - for all dataset
     rf_regression function : for monitoring anas data
     rf_classification function : for monitoring electricity, forestcover, weathere data
     write json files saved into 'results' folder (not for anchors)
+    
+8 - **Perm_importance.py** : Computes permutation feature importance of the Random Forest and makes plot
 
-8 - **performance.py** : compute precision and recall @k
+9 - **performance.py** : compute precision and recall @k
     uses json files in the 'results' folder and for each one creates an excel file with
     precision and recall @k together and save the corresponding plot
