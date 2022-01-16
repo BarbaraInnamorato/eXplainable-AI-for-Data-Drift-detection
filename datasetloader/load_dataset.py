@@ -2,12 +2,11 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import seaborn as sns
 from skmultiflow.data.data_stream import DataStream
 from sklearn.preprocessing import LabelEncoder
-
 from .drift_injection import inject_drift
 matplotlib.use('Agg')
+
 
 def read_data_electricity_market(foldername="data/", shuffle=False):
     df = pd.read_csv(foldername + "elecNormNew.csv")

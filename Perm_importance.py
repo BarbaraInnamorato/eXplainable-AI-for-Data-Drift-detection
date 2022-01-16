@@ -4,12 +4,11 @@ import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 
 def compute_pfi(rfc, to_export, all_cols, filename):
-    # print('PERM IMPORTANCE - held out set')
     """
     The n_repeats parameter sets the number of times a feature is randomly shuffled and returns
     a sample of feature importances.
 
-    """
+
     result = permutation_importance(rfc, to_export['X_test_post'], to_export['y_test_post'], n_repeats=10, random_state=42, n_jobs=2)
     print('results', result)
     to_zip = sorted(list(zip(all_cols, result.importances_mean)), key=lambda x:x[1], reverse=True)#.argsort())
@@ -29,7 +28,7 @@ def compute_pfi(rfc, to_export, all_cols, filename):
     plt.set_title("Permutation Importances (test set)")
     plt.tight_layout()
     plt.savefig('images/' + 'RF Permutation Feature Importance BOXPLOT %s' % filename)
-
+    """
 
     """
     As an alternative, the permutation importances of rf are computed on a held out test set. 
@@ -37,7 +36,8 @@ def compute_pfi(rfc, to_export, all_cols, filename):
     
     Also note that both random features have very low importances (close to 0) as expected.
     """
-    perm_importance = permutation_importance(rfc, to_export['X_test_post'], to_export['y_test_post'])
+    #perm_importance = permutation_importance(rfc, to_export['X_test_post'], to_export['y_test_post'])
+    perm_importance = permutation_importance(rfc, to_export['X_test_post'], to_export['y_test_post'], n_repeats=10, random_state=42, n_jobs=2)
     perm_zip = list(zip(all_cols, perm_importance['importances_mean']))
     perm_sorted = sorted(perm_zip, key=lambda x: x[1], reverse=True)
     print('perm imp 2 (held out) ', perm_sorted)
@@ -48,7 +48,7 @@ def compute_pfi(rfc, to_export, all_cols, filename):
     plt.xlabel("Permutation Importance")
     plt.title('RF Permutation Feature Importance')
     plt.tight_layout()
-    plt.savefig('images/' + f'RF Permutation Feature Importance 2 {filename}')
+    plt.savefig('images/' + f'RF Permutation Feature Importance {filename}')
 
 
 

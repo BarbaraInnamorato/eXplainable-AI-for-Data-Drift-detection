@@ -64,8 +64,8 @@ def read_files():
     for index, js in enumerate(folder):
         with open(os.path.join(path_to_json, js)) as json_file:
             data_dict_o = json.load(json_file)
-            print('***data_dict_o', data_dict_o)
-            print('****data_dict_o[1]', data_dict_o[1])
+            #print('***data_dict_o', data_dict_o)
+            #print('****data_dict_o[1]', data_dict_o[1])
 
             result_name = "performance_%s" % js
             print('-------------name', result_name)
@@ -93,8 +93,6 @@ def read_files():
                 actual = get_actual(v['swapped'])
 
                 if len(predicted) == 0 or len(actual) == 0: #succede con ANCHORS
-                    #break
-                    #raise Exception('one list between predicted and actual is empty')
                     print('WARNING: one list between predicted and actual is empty')
                     continue
                 else:

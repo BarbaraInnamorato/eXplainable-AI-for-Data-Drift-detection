@@ -313,8 +313,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     #return ret, anchor_res, lime_res
 """
 
-
-
 def st_xai(data_for_xai, cols, all_cols, filename):
         """
         Function for xai methods with student-teacher approach
@@ -349,8 +347,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             # Setting explainers
             explainer_shap = shap.KernelExplainer(diz['model'].predict,
                                                   shap.sample(train_set, nsamples=100, random_state=90),
-                                                  link = 'identity',
-                                                  l1_reg = len(all_cols)
+                                                  link='identity',
+                                                  l1_reg=len(all_cols)
                                                   )
 
             explainer_lime = lime.lime_tabular.LimeTabularExplainer(diz['X_train'],
@@ -360,14 +358,13 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                     discretize_continuous=True,
                                                                     verbose=True
                                                                     )
-
             predict_fn = lambda x: diz['model'].predict(x)
             explainer_anchor = AnchorTabular(predict_fn, all_cols)
             explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
 
             pred = diz['probs_student']
 
-            #############################  SHAP  ##############################
+            # SHAP
             start_time_s = time.time()
             print('ST SHAP sto calcolando shap values')
             shap_values = explainer_shap.shap_values(test_set,  nsamples=100)  # test set è una riga
@@ -380,38 +377,39 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
             # Get the force plot for each row
             shap.initjs()
-            shap.plots.force(explainer_shap.expected_value, shap_values, test_set , feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-            plt.tight_layout()
-            plt.savefig('images/'+ f'ST Local forceplot row {str(k)} dataset {filename}')
+            shap.plots.force(explainer_shap.expected_value, shap_values, test_set , feature_names=all_cols, matplotlib = True, show=False, text_rotation=6)#
+            #plt.tight_layout()
+            plt.savefig('html_images/'+ f'ST Local SHAP row {str(k)} dataset {filename}', bbox_inches='tight')
 
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
-            model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # list of probs
-            print('ST model output anas', model_output)
+            #model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # è uguale a ML prediction
+            #print('ST model output anas', model_output)
 
             dizio = {'batch %s' % k: {'row %s' % k: {
-                'class_names': class_names,
-                'ST_prediction': pred,              # ST Predicted
+                #'class_names': class_names,
+                'ST_prediction': pred,              # ST Prediction
                 'value_ordered': feat_shap_val,     # (feature, shap_value) : ordered list
                 'swapped': swap_shap,               # (feature, bool) : ordered list of swapped variables
                 'shap_values': shap_values
             }}}
             ret_st.append(dizio)
 
-            ############################### LIME ################################
+            # LIME
             start_time_lime = time.time()
             exp_lime = explainer_lime.explain_instance(diz['X_test'][0],
                                                        diz['model'].predict,
                                                        num_samples=100,
                                                        num_features=len(all_cols),
-                                                       distance_metric='euclidean')
+                                                       distance_metric='euclidean'
+                                                       )
             tot_lime = time.time() - start_time_lime
             time_lime.append(tot_lime)
 
             lime_prediction = exp_lime.local_pred
             exp_lime.as_pyplot_figure().tight_layout()
-            plt.text(0.3, 0.7, f' D3 Local LIME row {str(k)}')
-            plt.savefig('images/' + f' ST Local LIME row {str(k)} dataset {filename}')
+            #plt.text(0.3, 0.7, f' D3 Local LIME row {str(k)}')
+            plt.savefig('images/' + f'ST Local LIME row {str(k)} dataset {filename}')
             exp_lime.save_to_file('html_images/' + f'ST_lime_row_{str(k)}_dataset_{filename}.html') #save_to_file('lime.html')
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
@@ -444,14 +442,13 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                     variables.append((tt[2], mean_sum))
 
             lime_diz = {'batch %s' % k: {'row %s' % k: {
-                'class_names': class_names,
+               # 'class_names': class_names,
                 'ST_prediction': pred,  # ST prediction
                 'LIME_LOCAL_prediction': lime_prediction,  # xai prediction
-                'LIME_GLOBAL_prediction': exp_lime.predicted_value,  # xai global prediction
+                'LIME_GLOBAL_prediction': exp_lime.predicted_value,  # ML prediction (=Right)
                 'value_ordered': f_weight,  # (feature, lime_weight)
                 'feature_value': variables,  # (feature, real value)
                 'swapped': swap  # (feature, bool)
-
             }}}
 
             lime_res_st.append(lime_diz)
@@ -476,7 +473,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         f.close()
         f11.close()
 
+
         #return ret, lime_res, anchor_res
 
 print(f"xai_anas.py Total time: {(time.time() - first_time) / 60} minutes")
 print('END st_anas')
+

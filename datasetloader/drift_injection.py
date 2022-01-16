@@ -46,7 +46,7 @@ def swap_columns(X, y, selected_cols, starting_row, classification=True):
 
     else:
         bins = np.histogram(y.iloc[starting_row:], bins=math.ceil(math.sqrt(len(y.iloc[starting_row:])) / 10))
-        good_bins = [i for i in range(len(bins[0])) if bins[0][i] >= 100]
+        good_bins = [i for i in range(len(bins[0])) if bins[0][i] >= 4000]
         if len(good_bins) == 0:
             edges = bins[1]
         else:

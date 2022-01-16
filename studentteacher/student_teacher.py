@@ -174,4 +174,5 @@ def teacher_student_inference(drift_point, train_results):
     bar.finish()
 
     # return results
+    print('ST - list_exp_dict')
     return list_exp_dict

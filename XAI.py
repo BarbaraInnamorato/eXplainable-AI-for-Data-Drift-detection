@@ -65,8 +65,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
         # Setting explainers
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
-                                              #train_set,
-                                              #nsamples=100,
                                               shap.sample(train_set, nsamples=100, random_state=90),
                                               random_state=90,
                                               link='identity',
@@ -80,7 +78,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                                 discretize_continuous=True,
                                                                 discretizer='quartile',
                                                                 verbose=True)
-        predict_fn = lambda x : diz['model'].predict(x)
+        predict_fn = lambda x:diz['model'].predict(x)
         explainer_anchor = AnchorTabular(predict_fn, all_cols)
         explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
 
@@ -100,17 +98,10 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
             # Get the force plot for each row
             shap.initjs()
-            #fig = plt.figure(figsize = (20,10))
-            #fig.set_figheight(6)
-            shap.plots.force(explainer_shap.expected_value[1], shap_values[1],test_set.iloc[i,:], link = 'logit',feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-            plt.tight_layout()
-            plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
-
-            # print(f'D3 SHAP SUMMARY DOT {filename}')
-            # shap.summary_plot(shap_values[1], to_export['X_test_post'], show=False)
-            # plt.title(f'RF SHAP summary plot {filename}')
-            # fig.tight_layout()
-            # fig.savefig(f'images/BAR_D3_Summary_plot_{filename}')
+            plt.figure(figsize=(16, 5))
+            shap.plots.force(explainer_shap.expected_value[1], shap_values[1],test_set.iloc[i,:], link = 'logit',feature_names=all_cols, matplotlib = True, show=False, text_rotation=6) # matplotlib = True,
+            #plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
+            plt.savefig('html_images/'+ f'D3_SHAP_row_{str(i)}_dataset_{filename}.jpg', bbox_inches='tight')
 
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], round(tup[0], 3)) for tup in ordered_shap_list]
@@ -131,9 +122,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                                        diz['model'].predict_proba,
                                                        num_samples= 100,
                                                        num_features=len(all_cols),
-                                                       distance_metric='euclidean')  # provare anche una distanza diversa
-
-            
+                                                       distance_metric='euclidean')
             tot_lime = time.time() - start_time_lime
             time_lime.append(tot_lime)
 
@@ -141,9 +130,10 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
 
             #lime_prediction = exp_lime.local_pred
+            #print('lime pred', lime_prediction)
             #lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
             exp_lime.as_pyplot_figure().tight_layout()
-            plt.savefig('images/' +f' D3 Local LIME row {str(i)} dataset {filename}')
+            plt.savefig('images/' +f' D3_LIME_row{str(i)}_dataset_{filename}')
             exp_lime.save_to_file('html_images/' + f'D3_lime_row_{str(i)}_dataset_{filename}.html')
 
             variables = []  # (name, real value)
@@ -170,7 +160,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                     else:
                         swap.append((tt[2], False))
 
-                    mean_sum = round((float(tt[0]) + float(tt[-1])) / 2, 3)  # caso in cui il valore di un feature è in un range di valori
+                    mean_sum = round((float(tt[0]) + float(tt[-1])) / 2, 3)  #
                     variables.append((tt[2], mean_sum))
 
             lime_diz = {'batch %s' % k: {'row %s' % i: {
@@ -186,6 +176,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
 
             # ANCHORS
+            print('row id ', i)
             start_time_anchor = time.time()
 
             exp_anchor = explainer_anchor.explain(diz['X_test'][i],
@@ -197,7 +188,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             print('\n ALIBI EXPLANATION \n', exp_anchor)
 
             rules = exp_anchor.anchor
-            print('RULES', rules)
+            print('RULE', rules)
             precision = exp_anchor.precision
             coverage = exp_anchor.coverage
 
@@ -212,7 +203,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                         'empty rule: all neighbors have the same label')  # al primo batch potrebbe essere vuoto
             else:
                 for s in rules:  # nel caso in cui ci siano più predicati
-
                     splittato = s.split(' ')  # splittato = [nswprice, >, 0.08], [0.3 <= feature <= 0.6]
                     n = len(splittato)
 
@@ -223,7 +213,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                         else:
                             swapped.append((splittato[0], False))
                     if n > 3:  # more than 1 feature: caso tipo rules = ['nswprice > 0.08', 'vicprice > 0.00', 'day <= 2.00']
-                        # pos = 0                                      # splittato = [nswprice, >, 0.08]
+                                                              # splittato = [nswprice, >, 0.08]
                         for el in splittato:
                             if el.isalpha() and el in cols:
                                 contrib.append(el)
@@ -260,6 +250,11 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
         k += 1
 
+    # print('diz_shap', diz_shap)
+    # print('auc_values', auc_values)
+    print('number of identified drifted rows', i)
+
+
     mean_time_shap = np.mean(time_shap)
     mean_time_lime = np.mean(time_lime)
     mean_time_anchor = np.mean(time_anchor)
@@ -278,15 +273,12 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     with open('other_files/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
 
-    #with open('other_files/' + 'd3_diz_%s.json' % filename, 'w', encoding='utf-8') as ff0:
-    #    json.dump(diz_shap, ff0, cls=NumpyEncoder)
-
-
     #return ret, anchor_res, lime_res
 
     f.close()
     f1.close()
     ff2.close()
+
 
 
 
@@ -329,8 +321,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         explainer_shap = shap.KernelExplainer(diz['model'].predict_proba,
                                               shap.sample(train_set, nsamples=100, random_state=90),
-                                              #link='identity',
-                                              link='logit',
+                                              link='identity',
                                               l1_reg = len(all_cols)
                                               )
 
@@ -357,18 +348,15 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         end_time_shap = (time.time() - start_time) / 60
         time_shap.append(end_time_shap)
 
-        print(f'ST shap values {filename}', shap_values)
-
         zipped = list(zip(shap_values[1][0], all_cols))
         ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
 
         # Get the force plot for each row
         shap.initjs()
         shap.plots.force(explainer_shap.expected_value[1], shap_values[1], test_set, link='logit', feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-        name = f'ST Local SHAP row {str(k)}, dataset {filename}'
-        plt.title(f'Local SHAP row {str(k)} dataset {filename}')
-        plt.tight_layout()
-        plt.savefig('images/'+ name)
+        #plt.title(f'Local SHAP row {str(k)} dataset {filename}')
+        #plt.tight_layout()
+        plt.savefig('html_images/'+ f'ST_SHAP_row{str(k)}_dataset_{filename}', bbox_inches='tight')
 
         swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
         feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
@@ -394,11 +382,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
         ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
-        lime_prediction = exp_lime.local_pred
-        #lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
+        #lime_prediction = exp_lime.local_pred
         exp_lime.as_pyplot_figure().tight_layout()
-        plt.text(0.3, 0.7, f' D3 Local LIME row {str(k)}')
-        plt.savefig('images/' + f' ST Local LIME row {str(k)} dataset {filename}')
+        plt.savefig('images/' + f' ST_LIME_row{str(k)}_dataset_{filename}')
         exp_lime.save_to_file('html_images/' + f'ST_lime_row_{str(k)}_dataset_{filename}.html')
 
         variables = []  # (name, real value)
@@ -414,7 +400,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                     swap.append((tt[0], True))
                 else:
                     swap.append((tt[0], False))
-
                 variables.append((tt[0], round(float(tt[-1]), 3)))
 
             elif len(tt) > 3:
@@ -425,8 +410,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                 else:
                     swap.append((tt[2], False))
 
-                mean_sum = round((float(tt[0]) + float(tt[-1])) / 2,
-                                 3)  # caso in cui il valore di un feature è in un range di valori
+                mean_sum = round((float(tt[0]) + float(tt[-1])) / 2, 3)  # caso in cui il valore di un feature è in un range di valori
                 variables.append((tt[2], mean_sum))
 
         lime_diz = {'batch %s' % k: {'row %s' % k: {
@@ -442,6 +426,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         lime_res_st.append(lime_diz)
 
         # ANCHORS
+        print('row id ', k)
         start_time_anch = time.time()
         exp_anchor = explainer_anchor.explain(diz['X_test'][0],
                                               threshold=0.90,
@@ -452,7 +437,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         print('\n ALIBI EXPLANATION \n', exp_anchor)
 
         rules = exp_anchor.anchor
-        print('RULES', rules)
+        print('RULE', rules)
         precision = exp_anchor.precision
         coverage = exp_anchor.coverage
 
@@ -500,7 +485,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             'class_names': class_names,
             'ST_prediction': pred,                       # ST prediction
             'ST_pred_probs': predict_proba,              # ST predicted proba
-           # 'Anchor_prediction': pred_uno,
             'rule': ' AND '.join(exp_anchor.anchor),
             'precision': precision,
             'coverage': coverage,
@@ -511,6 +495,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         anchor_res_st.append(diz_anchors)
 
         k += 1
+
+    print('number of identified drifted rows', k)
 
     mean_time_shap = np.mean(time_shap)
     mean_time_lime = np.mean(time_lime)
@@ -542,7 +528,3 @@ print(f"XAI.PY Total time: {(time.time() - first_time) / 60} minutes")
 print('END XAI')
 
 
-"""
-from pycebox.ice import ice, ice_plot
-def ice_plot(data_for_xai, cols, all_cols):
-"""
