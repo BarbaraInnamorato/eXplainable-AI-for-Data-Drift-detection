@@ -339,10 +339,13 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         time_anchor = []
 
         for diz in data_for_xai:
+            print('---- ST diz------')
+            # print(diz)
+            print(diz['drifted'])
             train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
             test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
 
-            class_names = np.unique(diz['y_train'])
+            #class_names = np.unique(diz['y_train'])
 
             # Setting explainers
             explainer_shap = shap.KernelExplainer(diz['model'].predict,
@@ -378,17 +381,16 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             # Get the force plot for each row
             shap.initjs()
             shap.plots.force(explainer_shap.expected_value, shap_values, test_set , feature_names=all_cols, matplotlib = True, show=False, text_rotation=6)#
-            #plt.tight_layout()
             plt.savefig('html_images/'+ f'ST Local SHAP row {str(k)} dataset {filename}', bbox_inches='tight')
 
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
-            #model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # è uguale a ML prediction
-            #print('ST model output anas', model_output)
+            model_output = (explainer_shap.expected_value + shap_values.sum()).round(4)  # è uguale a ML prediction
+            print('ST model output anas', model_output)
 
             dizio = {'batch %s' % k: {'row %s' % k: {
-                #'class_names': class_names,
                 'ST_prediction': pred,              # ST Prediction
+                'drift': diz['drifted'],
                 'value_ordered': feat_shap_val,     # (feature, shap_value) : ordered list
                 'swapped': swap_shap,               # (feature, bool) : ordered list of swapped variables
                 'shap_values': shap_values

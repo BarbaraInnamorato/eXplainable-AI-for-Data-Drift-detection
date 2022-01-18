@@ -311,8 +311,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     student_error = []
 
     for diz in data_for_xai:
-        print('---- ST ------')
-        print(diz)
+        print('---- ST diz------')
+        #print(diz)
+        print(diz['drifted'])
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
         test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
         student_error.append(diz['student_error'])
@@ -353,9 +354,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         # Get the force plot for each row
         shap.initjs()
-        shap.plots.force(explainer_shap.expected_value[1], shap_values[1], test_set, link='logit', feature_names=all_cols, show=False, matplotlib = True, text_rotation=6)#, figsize=(50,12))
-        #plt.title(f'Local SHAP row {str(k)} dataset {filename}')
-        #plt.tight_layout()
+        shap.plots.force(explainer_shap.expected_value[1], shap_values[1], test_set, link='logit', feature_names=all_cols, show=False, matplotlib=True, text_rotation=6)
         plt.savefig('html_images/'+ f'ST_SHAP_row{str(k)}_dataset_{filename}', bbox_inches='tight')
 
         swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
@@ -363,6 +362,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         dizio = {'batch %s' % k: {'row %s' % k: {
             'class_names': class_names,
+            'drift': diz['drifted'],
             'ST_prediction': pred,
             'ST_pred_probs': predict_proba,             # ST prediction
             'value_ordered': feat_shap_val,             # (feature, shap_value)
@@ -415,6 +415,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         lime_diz = {'batch %s' % k: {'row %s' % k: {
             'class_names': class_names,
+            'drift': diz['drifted'],
             'ST_prediction': pred,                              # ST prediction
             'ST_pred_probs': predict_proba,                     # ST predicted probs
             'value_ordered': f_weight,                          # (feature, lime_weight)
