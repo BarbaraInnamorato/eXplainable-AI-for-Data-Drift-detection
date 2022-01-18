@@ -21,7 +21,7 @@ from progress.bar import IncrementalBar
 import time
 import os
 import Perm_importance
-# XAI Performance computation
+XAI Performance computation
 import performance
 
 # Create directories
@@ -40,9 +40,6 @@ if not os.path.exists('other_files'):
 
 # Setup
 models = ['d3', 'student-teacher']
-#models = ['student-teacher']
-
-
 n_repetitions = 1
 
 print('START')
@@ -94,7 +91,7 @@ def faicose_un_dataset(dataset_name):
     inf_results = {m: [] for m in models}
     anas_results = {m: [] for m in models}
 
-    """
+    
     inference_functions = {
         'd3': d3_inference(drift_point, train_results),
         'student-teacher': teacher_student_inference(drift_point,train_results)
@@ -118,7 +115,6 @@ def faicose_un_dataset(dataset_name):
     print('Swapped columns for drift injection are', cols_to_print)
     print()
 
-    
     # data for xai
     if dataset_name in ['anas']:
         anas_st = anas_results['student-teacher'][0]
@@ -126,15 +122,12 @@ def faicose_un_dataset(dataset_name):
         XAI.d3_xai(anas_d3, cols_to_print, all_cols, dataset_name)
         st_anas.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
         SP_LIME.sp_lime(anas_d3, all_cols, dataset_name)
-        #SP_LIME.st_sp_lime(anas_st, all_cols, dataset_name)
-
     else:
         st = inf_results['student-teacher'][0]
         d3 = inf_results['d3'][0]
         XAI.d3_xai(d3, cols_to_print, all_cols, dataset_name)
         XAI.st_xai(st, cols_to_print, all_cols, dataset_name)
         SP_LIME.sp_lime(d3, all_cols, dataset_name)
-        #SP_LIME.st_sp_lime(st, all_cols, dataset_name)"""
 
 
     # Monitoring data - PERFORM RANDOM FOREST (REGRESSION/CLASSIFICATION)
@@ -170,37 +163,37 @@ def execute_main():
     print("Starting 'execute_main'")
     # creating processes
     p1 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
-    # p2 = mp.Process(target=faicose_un_dataset, args=('weather',))
-    # p3 = mp.Process(target=faicose_un_dataset, args=('anas',))
-    # p4 = mp.Process(target=faicose_un_dataset, args=('electricity',))
+    p2 = mp.Process(target=faicose_un_dataset, args=('weather',))
+    p3 = mp.Process(target=faicose_un_dataset, args=('anas',))
+    p4 = mp.Process(target=faicose_un_dataset, args=('electricity',))
 
     # starting processes
     print(p1.start())
-    # print(p2.start())
-    # print(p3.start())
-    # print(p4.start())
+    print(p2.start())
+    print(p3.start())
+    print(p4.start())
 
 
     # process IDs
     print("ID of process p1: {}".format(p1.pid))
-    # print("ID of process p2: {}".format(p2.pid))
-    # print("ID of process p3: {}".format(p3.pid))
-    # print("ID of process p4: {}".format(p4.pid))
+    print("ID of process p2: {}".format(p2.pid))
+    print("ID of process p3: {}".format(p3.pid))
+    print("ID of process p4: {}".format(p4.pid))
 
     # wait until processes are finished
     p1.join()
-    # p2.join()
-    # p3.join()
-    # p4.join()
+    p2.join()
+    p3.join()
+    p4.join()
 
     # all processes finished
     print("All processes finished execution!")
 
     # check if processes are alive
     print("Process p1 is alive: {}".format(p1.is_alive()))
-    # print("Process p2 is alive: {}".format(p2.is_alive()))
-    # print("Process p3 is alive: {}".format(p3.is_alive()))
-    # print("Process p4 is alive: {}".format(p4.is_alive()))
+    print("Process p2 is alive: {}".format(p2.is_alive()))
+    print("Process p3 is alive: {}".format(p3.is_alive()))
+    print("Process p4 is alive: {}".format(p4.is_alive()))
 
     # Performances Computation (outside the for: takes files from results folder)
     performance.read_files()
