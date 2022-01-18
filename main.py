@@ -21,7 +21,9 @@ from progress.bar import IncrementalBar
 import time
 import os
 import Perm_importance
-XAI Performance computation
+import XAI
+
+# Performance computation
 import performance
 
 # Create directories
