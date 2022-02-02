@@ -88,9 +88,11 @@ def drift_detector(S, T, threshold):
         return False, shap_dict
 
 
+
 class D3():
 
-    def __init__(self, dim, auc=0.7, w=2000, rho=0.2):
+    #def __init__(self, dim, auc=0.7, w=1000, rho=0.2):
+    def __init__(self, dim, auc, w, rho):
         """
         Parameters
         ----------
@@ -153,7 +155,8 @@ class D3():
         return self.win_label[:self.window_index]
 
 
-def d3_inference(drift_point, train_results, win_lenght=2000, rho=0.2, auc_score=0.7):
+#def d3_inference(drift_point, train_results, win_lenght=2000, rho=0.2, auc_score=0.7):
+def d3_inference(drift_point, train_results, win_lenght, rho, auc_score):
 
     n_train = int(train_results[0]["n_train"])
     stream = train_results[0]["Stream"]

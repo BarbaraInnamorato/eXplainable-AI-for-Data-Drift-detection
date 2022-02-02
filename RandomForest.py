@@ -1,8 +1,6 @@
 import warnings
 warnings.filterwarnings("ignore")
 
-import Perm_importance
-
 import shap
 
 from sklearn import metrics
@@ -36,7 +34,7 @@ def plot_oob(to_export, all_cols, filename):
     # Range of `n_estimators` values to explore.
     min_estimators = 15
     max_estimators = 175
-
+    clf = None
     for label, clf in ensemble_clfs:
         for i in range(min_estimators, max_estimators + 1):
             clf.set_params(n_estimators=i)
@@ -47,17 +45,17 @@ def plot_oob(to_export, all_cols, filename):
             error_rate[label].append((i, oob_error))
 
     # Generate the "OOB error rate" vs. "n_estimators" plot.
-    # plt.figure()
-    # for label, clf_err in error_rate.items():
-    #     xs, ys = zip(*clf_err)
-    #     plt.plot(xs, ys, label=label)
-    #
-    # plt.xlim(min_estimators, max_estimators)
-    # plt.xlabel("n_trees")
-    # plt.ylabel("OOB error rate")
-    # plt.legend(loc="upper right")
-    # plt.savefig(f'oob_error_{filename}')
+    plt.figure()
+    for label, clf_err in error_rate.items():
+        xs, ys = zip(*clf_err)
+        plt.plot(xs, ys, label=label)
 
+    plt.title(f'OOB_ERROR {filename}')
+    plt.xlim(min_estimators, max_estimators)
+    plt.xlabel("n_trees")
+    plt.ylabel("OOB error rate")
+    plt.legend(loc="upper right")
+    plt.savefig(f'oob_error_{filename}')
 
     # random forest FEATURE IMPORTANCE
     for name, importance in zip(clf.feature_importances_, all_cols):
@@ -66,7 +64,7 @@ def plot_oob(to_export, all_cols, filename):
     importances = clf.feature_importances_
     ord_zip = list(zip(all_cols, importances))
     sort_ord_zip = sorted(ord_zip, key=lambda x:x[1], reverse=True)
-    print('sort_ord_zip', sort_ord_zip)
+    #print('sort_ord_zip', sort_ord_zip)
     indices = np.argsort(importances)
 
     plt.figure()
@@ -78,7 +76,7 @@ def plot_oob(to_export, all_cols, filename):
     plt.savefig(f'images/RF Feature Importances {filename}')
 
     class_names = np.unique(to_export['y_train'])
-    print('class_names', class_names)
+    #print('class_names', class_names)
 
     avg = ''
     if len(class_names) == 2:
@@ -122,6 +120,23 @@ def plot_oob(to_export, all_cols, filename):
     print(f'class_rep_post_drift {filename}')
     print(class_rep_post_drift)
 
+    fpr, tpr, thresholds = metrics.roc_curve(to_export['y_test_post'], pred_test_post, pos_label=2)
+
+    """
+    * *Precision*: Of the predictions the model made for this class, what proportion were correct? 
+    --> Of all the patients the model predicted are diabetic, how many are actually diabetic?
+    * *Recall*: Out of all of the instances of this class in the test dataset, how many did the model identify?
+    --> Of all the patients that are actually diabetic, how many did the model identify?
+    * *F1-Score*: An average metric that takes both precision and recall into account.
+    * *Support*: How many instances of this class are there in the test dataset?
+    
+    The classification report also includes averages for these metrics, including a weighted average that allows 
+    for the imbalance in the number of cases of each class.
+    
+    Note that the correct (true) predictions form a diagonal line from top left to bottom right - these figures should
+    be significantly higher than the false predictions if the model is any good.
+    """
+
     diz_rf_cl = {'oob_score': clf.oob_score_,
                  'Random Forest feature importance': sort_ord_zip,
 
@@ -138,6 +153,7 @@ def plot_oob(to_export, all_cols, filename):
                  'Recall_post': recall_score(to_export['y_test_post'], pred_test_post, average=avg),
                  'F1_score_post': score_test_post,
 
+                 'AUC': metrics.auc(fpr, tpr),
                  'time': tot_time
                  }
 
@@ -146,7 +162,6 @@ def plot_oob(to_export, all_cols, filename):
     f2.close()
 
     return clf
-    #Perm_importance.compute_pfi(clf, to_export, all_cols, filename)
 
 
 
@@ -178,16 +193,17 @@ def plot_oob_regression(to_export, all_cols, filename):
             error_rate[label].append((i, oob_error))
 
     # Generate the "OOB error rate" vs. "n_estimators" plot.
-    # plt.figure()
-    # for label, clf_err in error_rate.items():
-    #     xs, ys = zip(*clf_err)
-    #     plt.plot(xs, ys, label=label)
+    plt.figure()
+    for label, clf_err in error_rate.items():
+        xs, ys = zip(*clf_err)
+        plt.plot(xs, ys, label=label)
 
-    # plt.xlim(min_estimators, max_estimators)
-    # plt.xlabel("n_trees")
-    # plt.ylabel("OOB error rate")
-    # plt.legend(loc="upper right")
-    # plt.savefig(f'oob_error_{filename}')
+    plt.title(f'OOB_ERROR {filename}')
+    plt.xlim(min_estimators, max_estimators)
+    plt.xlabel("n_trees")
+    plt.ylabel("OOB error rate")
+    plt.legend(loc="upper right")
+    plt.savefig(f'oob_error_{filename}')
 
     # random forest FEATURE IMPORTANCE
     for name, importance in zip(clf.feature_importances_, all_cols):
@@ -201,8 +217,7 @@ def plot_oob_regression(to_export, all_cols, filename):
     indices = np.argsort(importances)
 
     plt.figure()
-    # plt.figure(figsize=(12, 10))
-    plt.title('Random Forest Feature Importances (MDI)- Classification')
+    plt.title('Random Forest Feature Importances (MDI)- Regression')
     plt.barh(range(len(indices)), importances[indices], color='b', align='center')
     plt.yticks(range(len(indices)), [all_cols[i] for i in indices])
     plt.xlabel('Relative Importance')
@@ -225,7 +240,7 @@ def plot_oob_regression(to_export, all_cols, filename):
     print('explainer finito REGRESSION, ora shap values')
     start_time = time.time()
     shap_values = explainer.shap_values(to_export['X_test_post'])  # provo a usare un sample
-    print('shap val RF regression \n', shap_values)
+    #print('shap val RF regression \n', shap_values)
     end_time = (time.time() - start_time) / 60
 
     # Make shap plot
@@ -276,4 +291,3 @@ def plot_oob_regression(to_export, all_cols, filename):
     f1.close()
 
     return clf
-    #Perm_importance.compute_pfi(clf, to_export, all_cols, filename)

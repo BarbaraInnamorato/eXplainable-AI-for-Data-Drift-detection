@@ -3,7 +3,6 @@ import numpy as np
 
 import math
 
-
 def num_cols(df):
     """
 
@@ -19,7 +18,6 @@ def num_cols(df):
 
 def create_drift_points(X, min_point=0.7, max_point=0.9):
     """
-
     :param X: pd.Dataframe of features
     :param min_point: float in [0,1], minimum point of the stream to start drift (default 0.7)
     :param max_point: float in [0,1], maximum point of the stream to start drift (default 0.9)
@@ -46,7 +44,7 @@ def swap_columns(X, y, selected_cols, starting_row, classification=True):
 
     else:
         bins = np.histogram(y.iloc[starting_row:], bins=math.ceil(math.sqrt(len(y.iloc[starting_row:])) / 10))
-        good_bins = [i for i in range(len(bins[0])) if bins[0][i] >= 300]
+        good_bins = [i for i in range(len(bins[0])) if bins[0][i] >= 3500]
         if len(good_bins) == 0:
             edges = bins[1]
         else:

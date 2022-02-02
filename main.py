@@ -21,7 +21,6 @@ from progress.bar import IncrementalBar
 import time
 import os
 import Perm_importance
-import XAI
 
 # Performance computation
 import performance
@@ -42,7 +41,7 @@ if not os.path.exists('other_files'):
 
 # Setup
 models = ['d3', 'student-teacher']
-n_repetitions = 1
+n_repetitions = 2
 
 print('START')
 print('-----')
@@ -56,23 +55,22 @@ def faicose_un_dataset(dataset_name):
     real_drift_points = []
     drift_point = 0
 
-
     # Drift Injection and Stream Creation
     for i in range(n_repetitions):
         dstream, drifted_rows, drift_point, drift_cols = load_stream(dataset_name, shuffle=False)
         streams.append(dstream)
         real_drift_points.append(drift_point)
 
-
     # Training Phase
     if dataset_name in ['anas']:
         teacher = Teacher('RandomForestRegressor')
         student = Student('RandomForestRegressor')
+    elif dataset_name == 'weather':
+        teacher = Teacher('LogisticRegression')
+        student = Student('LogisticRegression')
     else:
         teacher = Teacher('RandomForestClassifier')
         student = Student('RandomForestClassifier')
-        #teacher = Teacher('LogisticRegression')
-        #student = Student('LogisticRegression')
 
     train_results = []
     bar = IncrementalBar('Training Phase', max=len(streams))
@@ -93,13 +91,20 @@ def faicose_un_dataset(dataset_name):
     inf_results = {m: [] for m in models}
     anas_results = {m: [] for m in models}
 
-    
+    if dataset_name == 'electricity':
+        auc, rho, w = 0.9, 0.1, 500
+    elif dataset_name == 'forestcover':
+        auc, rho, w = 0.7, 0.2, 2000
+    elif dataset_name == 'weather':
+        auc, rho, w = 0.8, 0.2, 500
+    else:
+        auc, rho, w = 0.9, 0.1, 500
+
     inference_functions = {
-        'd3': d3_inference(drift_point, train_results),
+        'd3': d3_inference(drift_point, train_results, w, rho, auc),
         'student-teacher': teacher_student_inference(drift_point,train_results)
         }
 
-    
     ii = 1
     for idx, r in enumerate(train_results):
         print('r', r)
@@ -131,7 +136,6 @@ def faicose_un_dataset(dataset_name):
         XAI.st_xai(st, cols_to_print, all_cols, dataset_name)
         SP_LIME.sp_lime(d3, all_cols, dataset_name)
 
-
     # Monitoring data - PERFORM RANDOM FOREST (REGRESSION/CLASSIFICATION)
     for idx, s in enumerate(streams):
         n_train = train_results[idx]['n_train']
@@ -139,7 +143,7 @@ def faicose_un_dataset(dataset_name):
 
         X_train, y_train = s.next_sample(n_train)
         X_test_pre, y_test_pre = s.next_sample(real_drift_points[0] - n_train)
-        X_test_post, y_test_post = s.next_sample(s.data.shape[0] - real_drift_points[0] )
+        X_test_post, y_test_post = s.next_sample(s.data.shape[0] - real_drift_points[0])
 
         to_export = {'X_train':X_train,
                      'y_train': y_train,
@@ -155,7 +159,6 @@ def faicose_un_dataset(dataset_name):
             Perm_importance.compute_pfi(model, to_export, all_cols, dataset_name)
         else:
             print('----------RANDOM FOREST CLASSIFICATION %s'%dataset_name)
-            #RandomForest.plot_oob(to_export, all_cols, dataset_name)
             model = RandomForest.plot_oob(to_export, all_cols, dataset_name)
             Perm_importance.compute_pfi(model, to_export, all_cols, dataset_name)
 
@@ -165,16 +168,15 @@ def execute_main():
     print("Starting 'execute_main'")
     # creating processes
     p1 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
-    p2 = mp.Process(target=faicose_un_dataset, args=('weather',))
-    p3 = mp.Process(target=faicose_un_dataset, args=('anas',))
-    p4 = mp.Process(target=faicose_un_dataset, args=('electricity',))
+    p2 = mp.Process(target=faicose_un_dataset, args=('electricity',))
+    p3 = mp.Process(target=faicose_un_dataset, args=('weather',))
+    p4 = mp.Process(target=faicose_un_dataset, args=('anas',))
 
     # starting processes
     print(p1.start())
     print(p2.start())
     print(p3.start())
     print(p4.start())
-
 
     # process IDs
     print("ID of process p1: {}".format(p1.pid))
@@ -203,6 +205,7 @@ def execute_main():
     print(f"Total time: {(time.time() - start_time) / 60} minutes")
     print('---')
     print('END')
+
 
 if __name__ == "__main__":
     execute_main()

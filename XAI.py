@@ -1,5 +1,6 @@
 import warnings
 warnings.filterwarnings("ignore")
+import xlsxwriter
 
 import shap
 import lime
@@ -12,11 +13,6 @@ import pandas as pd
 import json
 import time
 
-# Connect pandas with plotly
-# import cufflinks as cf
-# cf.go_offline()
-# from plotly.offline import init_notebook_mode
-# init_notebook_mode(connected='true')
 
 first_time = time.time() # returns the processor time
 
@@ -94,26 +90,30 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             time_shap.append(end_time_shap)
 
             zipped = list(zip(shap_values[pred], all_cols))
-            ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
+            ordered_shap_list = sorted(zipped, key=lambda x: abs(x[0]), reverse=True)
+            model_output = (explainer_shap.expected_value[1] + shap_values[1].sum()).round(4)  # è uguale a ML prediction
+            #print(f'D3 model output {filename}', model_output)
 
             # Get the force plot for each row
             shap.initjs()
             plt.figure(figsize=(16, 5))
             shap.plots.force(explainer_shap.expected_value[1], shap_values[1],test_set.iloc[i,:], link = 'logit',feature_names=all_cols, matplotlib = True, show=False, text_rotation=6) # matplotlib = True,
-            #plt.savefig('images/'+ f'D3 Local SHAP row {str(i)} dataset {filename}')
             plt.savefig('html_images/'+ f'D3_SHAP_row_{str(i)}_dataset_{filename}.jpg', bbox_inches='tight')
 
             swap_shap = [(tup[1], True if tup[1] in cols else False) for tup in ordered_shap_list]
             feat_shap_val = [(tup[1], round(tup[0], 3)) for tup in ordered_shap_list]
 
             dizio = {'batch %s' % k: {'row %s' % i: {
+                'auc': diz['AUC'],
                 'class_names': class_names,
+                'model_output': model_output,
                 'd3_prediction': pred,                                          # D3 class predicted
                 'd3_pred_probs': predict_proba,                                 # D3 probs predicted
                 'value_ordered': feat_shap_val,                                 # (feature, shap_value) : ordered list
                 'swapped': swap_shap,                                           # (feature, bool) : ordered list of swapped variables
                 'shap_values': shap_values
             }}}
+
             ret.append(dizio)
 
             # LIME 
@@ -129,9 +129,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
             ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
 
-            #lime_prediction = exp_lime.local_pred
-            #print('lime pred', lime_prediction)
-            #lime_class_pred = [0 if lime_prediction < 0.5 else 1][0]
             exp_lime.as_pyplot_figure().tight_layout()
             plt.savefig('images/' +f' D3_LIME_row{str(i)}_dataset_{filename}')
             exp_lime.save_to_file('html_images/' + f'D3_lime_row_{str(i)}_dataset_{filename}.html')
@@ -149,7 +146,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                         swap.append((tt[0], True))
                     else:
                         swap.append((tt[0], False))
-
                     variables.append((tt[0], round(float(tt[-1]), 3)))
 
                 elif len(tt) > 3:
@@ -164,9 +160,11 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                     variables.append((tt[2], mean_sum))
 
             lime_diz = {'batch %s' % k: {'row %s' % i: {
+                'auc': diz['AUC'],
                 'class_names': class_names,
                 'd3_prediction': pred,                                  # D3 prediction (LR)
                 'd3_pred_probs': predict_proba,                         # D3 prediction (LR)
+                'lime_pred': exp_lime.local_pred,
                 'value_ordered': f_weight,                              # (feature, lime_weight)
                 'feature_value': variables,                             # (feature, real value)
                 'swapped': swap                                         # (feature, bool)
@@ -235,10 +233,11 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                                     break
 
             diz_anchors = {'batch %s' % k: {'row %s' % i: {
+                'auc': diz['AUC'],
                 'class_names': class_names,
                 'd3_prediction': pred,
                 'd3_pred_probs': predict_proba,
-                #'Anchor_prediction': pred_uno,
+                'Anchor_prediction': class_names[explainer_anchor.predictor(diz['X_test'][i].reshape(1, -1))[0]],
                 'rule': ' AND '.join(exp_anchor.anchor),
                 'precision': precision,
                 'coverage': coverage,
@@ -250,11 +249,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
         k += 1
 
-    # print('diz_shap', diz_shap)
-    # print('auc_values', auc_values)
-    print('number of identified drifted rows', i)
-
-
     mean_time_shap = np.mean(time_shap)
     mean_time_lime = np.mean(time_lime)
     mean_time_anchor = np.mean(time_anchor)
@@ -262,6 +256,13 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     means = [mean_time_shap, mean_time_lime, mean_time_anchor]
     to_export = pd.DataFrame(means, columns=['mean time'], index=index)
     to_export.to_excel(f'other_files/D3_TIME_{filename}.xlsx')
+
+
+    # with xlsxwriter.Workbook(f'D3_auc_values_{filename}.xlsx') as workbook:  # generate file test.xlsx
+    #     worksheet = workbook.add_worksheet()
+    #     for row, data in enumerate(auc_values):
+    #         worksheet.write_row(row, 0, data)
+
 
     # D3 FILES
     with open('results/' + 'D3_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:
@@ -272,8 +273,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
     with open('other_files/' + 'D3_ANCHORS_%s.json' % filename, 'w', encoding='utf-8') as ff2:
         json.dump(anchor_res, ff2, cls=NumpyEncoder)
-
-    #return ret, anchor_res, lime_res
 
     f.close()
     f1.close()
@@ -311,8 +310,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     student_error = []
 
     for diz in data_for_xai:
-        print('---- ST diz------')
-        #print(diz)
+        print('---- ST------')
         print(diz['drifted'])
         train_set = pd.DataFrame(diz['X_train'], columns=all_cols)
         test_set = pd.DataFrame(diz['X_test'], columns=all_cols)
@@ -326,7 +324,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                               l1_reg = len(all_cols)
                                               )
 
-
         explainer_lime = lime.lime_tabular.LimeTabularExplainer(diz['X_train'],
                                                                 mode='classification',
                                                                 feature_names=all_cols,
@@ -335,6 +332,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                                                 discretizer='quartile',
                                                                 verbose=True
                                                                 )
+
         predict_fn = lambda x: diz['model'].predict(x)
         explainer_anchor = AnchorTabular(predict_fn, all_cols)
         explainer_anchor.fit(diz['X_train'], disc_perc=(25, 50, 75))
@@ -350,7 +348,9 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         time_shap.append(end_time_shap)
 
         zipped = list(zip(shap_values[1][0], all_cols))
-        ordered_shap_list = sorted(zipped, key=lambda x: x[0], reverse=True)
+        ordered_shap_list = sorted(zipped, key=lambda x: abs(x[0]), reverse=True)
+        model_output = (explainer_shap.expected_value[1] + shap_values[1].sum()).round(4)  # è uguale a ML prediction
+        #print(f'ST model output {filename}', model_output)
 
         # Get the force plot for each row
         shap.initjs()
@@ -361,8 +361,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         feat_shap_val = [(tup[1], tup[0]) for tup in ordered_shap_list]
 
         dizio = {'batch %s' % k: {'row %s' % k: {
+            'student_error': diz['student_error'],
             'class_names': class_names,
             'drift': diz['drifted'],
+            'model_output': model_output,
             'ST_prediction': pred,
             'ST_pred_probs': predict_proba,             # ST prediction
             'value_ordered': feat_shap_val,             # (feature, shap_value)
@@ -382,7 +384,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         big_lime_list = exp_lime.as_list()  # list of tuples (representation, weight),
         ord_lime = sorted(big_lime_list, key=lambda x: abs(x[1]), reverse=True)
-        #lime_prediction = exp_lime.local_pred
         exp_lime.as_pyplot_figure().tight_layout()
         plt.savefig('images/' + f' ST_LIME_row{str(k)}_dataset_{filename}')
         exp_lime.save_to_file('html_images/' + f'ST_lime_row_{str(k)}_dataset_{filename}.html')
@@ -414,8 +415,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                 variables.append((tt[2], mean_sum))
 
         lime_diz = {'batch %s' % k: {'row %s' % k: {
+            'student_error': diz['student_error'],
             'class_names': class_names,
             'drift': diz['drifted'],
+            'lime_pred':  exp_lime.local_pred,
             'ST_prediction': pred,                              # ST prediction
             'ST_pred_probs': predict_proba,                     # ST predicted probs
             'value_ordered': f_weight,                          # (feature, lime_weight)
@@ -435,10 +438,10 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                               coverage_samples=1000)
         end_time_a = time.time() - start_time_anch
         time_anchor.append(end_time_a)
-        print('\n ALIBI EXPLANATION \n', exp_anchor)
+        #print('\n ALIBI EXPLANATION \n', exp_anchor)
 
         rules = exp_anchor.anchor
-        print('RULE', rules)
+        #print('RULE', rules)
         precision = exp_anchor.precision
         coverage = exp_anchor.coverage
 
@@ -483,6 +486,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                 break
 
         diz_anchors = {'batch %s' % k: {'row %s' % k: {
+            'student_error': diz['student_error'],
             'class_names': class_names,
             'ST_prediction': pred,                       # ST prediction
             'ST_pred_probs': predict_proba,              # ST predicted proba
@@ -491,6 +495,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             'coverage': coverage,
             'swapped': swapped,                          # (feature, bool)
             'value_ordered': contrib,               # list of features
+            'Anchor_prediction': class_names[explainer_anchor.predictor(diz['X_test'][0].reshape(1, -1))[0]]
         }}}
 
         anchor_res_st.append(diz_anchors)
@@ -507,6 +512,12 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     to_export = pd.DataFrame(means, columns=['mean time'], index=index)
     to_export.to_excel(f'other_files/ST_TIME_{filename}.xlsx')
 
+    # with xlsxwriter.Workbook(f'ST_StudentError_{filename}.xlsx') as workbook:  # generate file test.xlsx
+    #     worksheet = workbook.add_worksheet()
+    #     for row, data in enumerate(student_error):
+    #         worksheet.write_row(row, 0, data)
+
+
     # ST FILES
     with open('results/' + 'ST_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:
         json.dump(ret_st, f, cls=NumpyEncoder)
@@ -520,8 +531,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     f.close()
     f1.close()
     f2.close()
-
-    #return ret, lime_res, anchor_res
 
 
 tot_time = f"XAI.PY Total time: {(time.time() - first_time) / 60} minutes"

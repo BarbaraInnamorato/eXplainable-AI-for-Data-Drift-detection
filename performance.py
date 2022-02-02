@@ -12,11 +12,14 @@ if not os.path.exists('performances'):
 
 def precision_k(predicted, actual, k):
     predicted_selected = predicted[:k]
+    #print('predicted_selected', predicted_selected, len(predicted_selected), 'k',k)
+    #print('set predicted_selected', set(predicted_selected), len(set(predicted_selected)))
     return len(set(predicted_selected) & set(actual)) / k
 
 
 def recall_k(predicted, actual, k):
     predicted_selected = predicted[:k]
+    print('predicted selected:', predicted_selected, len(predicted_selected))
     return len(set(predicted_selected) & set(actual)) / len(actual)
 
 
@@ -25,6 +28,7 @@ def get_actual(values):
     for k, r in values:
         if r:
             actual.append(k)
+    print('len actual', actual, len(actual))
     return actual
 """
 - 'swapped': [  ['date', True], 
@@ -33,12 +37,14 @@ def get_actual(values):
                 ['vicdemand', False], 
                 ['nswprice', True], 
                 ['vicprice', False], 
-                ['period', False], 
+                ['period', False],  
                 ['transfer', True]]
 la lista swapped è ordinata
 
 - ACTUAL ['nswdemand', 'vicdemand', 'period', 'date'] sono i true in swapped --> stesso ordine di swapped
-- SET ACTUAL {'vicdemand', 'nswdemand', 'period', 'date'}
+- SET ACTUAL {'vicdemand', 'nswdemand', 'period', 'date'} NOOOO
+
+ACTUAL CORRISPONDE A SWAPPED
 
 - predicted ['date', 'day', 'nswdemand', 'vicdemand', 'nswprice', 'vicprice', 'period', 'transfer'] 
     --> stesso ordine di swapped
@@ -89,13 +95,14 @@ def read_files():
                     predicted = v['value_ordered']
                 else:
                     predicted = [t[0] for t in v['value_ordered']]
-                #predicted = [t[0] for t in v['value_ordered']]
                 actual = get_actual(v['swapped'])
 
                 if len(predicted) == 0 or len(actual) == 0: #succede con ANCHORS
                     print('WARNING: one list between predicted and actual is empty')
                     continue
                 else:
+                    #print('predicted', predicted)
+                    #print('actual', actual)
                     resulting_dict = {'predicted': predicted, 'actual': actual}
                     for k in k_range:
                         resulting_dict[f"P@{k}"] = precision_k(predicted, actual, k)

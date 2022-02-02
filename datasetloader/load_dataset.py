@@ -24,6 +24,7 @@ def read_data_electricity_market(foldername="data/", shuffle=False):
     # plt.title('pearson correlation for electricity dataset')
     # plt.savefig('images/pearson correlation for electricity dataset')
 
+    #elec['day'] = elec.day.astype('category')
     # Set x,y as numeric
     X = X.astype(float)
     label = ["UP", "DOWN"]
