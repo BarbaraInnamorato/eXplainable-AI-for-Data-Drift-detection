@@ -67,9 +67,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
             # SHAP
             start_time_s = time.time()
-            print('ST SHAP sto calcolando shap values')
+            print('ST Computing shap values')
             shap_values = explainer_shap.shap_values(test_set,  nsamples=100)  # test set è una riga
-            #print('ST ANAS SHAP VALUES', shap_values)
             end_time_shap = (time.time() - start_time_s) / 60
             time_shap.append(end_time_shap)
 

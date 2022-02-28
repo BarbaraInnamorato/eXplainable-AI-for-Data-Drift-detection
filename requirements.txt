@@ -6,4 +6,3 @@ shap
 lime
 ailbi = 0.6.2
 matplotlib
-xgboost

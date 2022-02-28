@@ -24,7 +24,16 @@ def read_data_electricity_market(foldername="data/", shuffle=False):
     # plt.title('pearson correlation for electricity dataset')
     # plt.savefig('images/pearson correlation for electricity dataset')
 
-    #elec['day'] = elec.day.astype('category')
+    # Fill diagonal and upper half with NaNs
+    # mask = np.zeros_like(cor, dtype=bool)
+    # mask[np.triu_indices_from(mask)] = True
+    # cor[mask] = np.nan
+    # (cor
+    #  .style
+    #  .background_gradient(cmap='seismic', axis=None, vmin=-1, vmax=1)
+    #  .highlight_null(null_color='#f1f1f1')  # Color NaNs grey
+    #  .set_precision(2))
+
     # Set x,y as numeric
     X = X.astype(float)
     label = ["UP", "DOWN"]
@@ -62,6 +71,8 @@ def read_data_weather(foldername="data/weather/", shuffle=False):
     # plt.ylabel('Instances')
     # plt.savefig('Weather target')
 
+
+
     # Pearson correlation
     # plt.figure(figsize=(12, 10))
     # cor = X.corr()
@@ -70,6 +81,16 @@ def read_data_weather(foldername="data/weather/", shuffle=False):
     # sns.heatmap(cor, annot=True, cmap=plt.cm.Reds)
     # plt.title('pearson correlation for weather dataset')
     # plt.savefig('images/pearson correlation for weather dataset')
+
+    # Fill diagonal and upper half with NaNs
+    # mask = np.zeros_like(cor, dtype=bool)
+    # mask[np.triu_indices_from(mask)] = True
+    # cor[mask] = np.nan
+    # (cor
+    #  .style
+    #  .background_gradient(cmap='seismic', axis=None, vmin=-1, vmax=1)
+    #  .highlight_null(null_color='#f1f1f1')  # Color NaNs grey
+    #  .set_precision(2))
 
     return X, y
 
@@ -90,6 +111,15 @@ def read_data_forest_cover_type(foldername="data/", shuffle=False):
     # plt.title('pearson correlation for forestcover dataset')
     # plt.savefig(r'images/pearson correlation for forestcover dataset')
 
+    # Fill diagonal and upper half with NaNs
+    # mask = np.zeros_like(cor, dtype=bool)
+    # mask[np.triu_indices_from(mask)] = True
+    # cor[mask] = np.nan
+    # (cor
+    #  .style
+    #  .background_gradient(cmap='seismic', axis=None, vmin=-1, vmax=1)
+    #  .highlight_null(null_color='#f1f1f1')  # Color NaNs grey
+    #  .set_precision(2))
     return X, y
 
 
@@ -108,6 +138,16 @@ def read_data_anas(foldername="data/", shuffle=False):
     # plt.savefig('images/pearson correlation for anas dataset')
     # pd_cor = pd.DataFrame(cor)
     # pd_cor.to_excel('other_files/'+ f'CORR_panama.xlsx')
+
+    # Fill diagonal and upper half with NaNs
+    # mask = np.zeros_like(cor, dtype=bool)
+    # mask[np.triu_indices_from(mask)] = True
+    # cor[mask] = np.nan
+    # (cor
+    #  .style
+    #  .background_gradient(cmap='seismic', axis=None, vmin=-1, vmax=1)
+    #  .highlight_null(null_color='#f1f1f1')  # Color NaNs grey
+    #  .set_precision(2))
 
     return X, y
 
@@ -128,8 +168,6 @@ def load_stream(name, drift=True, shuffle=False):
         if drift:
             X, y, drift_point, drift_cols = inject_drift(X, y)
             drifted_rows = X['drifted']
-
-
 
     elif name == 'weather':
         X, y = read_data_weather(shuffle=shuffle)

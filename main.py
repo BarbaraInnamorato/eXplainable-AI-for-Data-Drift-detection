@@ -41,7 +41,7 @@ if not os.path.exists('other_files'):
 
 # Setup
 models = ['d3', 'student-teacher']
-n_repetitions = 2
+n_repetitions = 1
 
 print('START')
 print('-----')

@@ -91,7 +91,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
             zipped = list(zip(shap_values[pred], all_cols))
             ordered_shap_list = sorted(zipped, key=lambda x: abs(x[0]), reverse=True)
             model_output = (explainer_shap.expected_value[1] + shap_values[1].sum()).round(4)  # è uguale a ML prediction
-            #print(f'D3 model output {filename}', model_output)
 
             # Get the force plot for each row
             shap.initjs()
@@ -209,8 +208,7 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
                             swapped.append((splittato[0], True))
                         else:
                             swapped.append((splittato[0], False))
-                    if n > 3:  # more than 1 feature: caso tipo rules = ['nswprice > 0.08', 'vicprice > 0.00', 'day <= 2.00']
-                                                              # splittato = [nswprice, >, 0.08]
+                    if n > 3:
                         for el in splittato:
                             if el.isalpha() and el in cols:
                                 contrib.append(el)
@@ -222,7 +220,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
 
                             else:  # caso tipo: 0.3 <= feature <= 0.6
                                 pos = 2
-                                # print('splittato',splittato)
                                 contrib.append(splittato[pos])
                                 if splittato[pos] in cols:
                                     swapped.append((splittato[pos], True))
@@ -255,13 +252,6 @@ def d3_xai(data_for_xai, cols, all_cols, filename):
     means = [mean_time_shap, mean_time_lime, mean_time_anchor]
     to_export = pd.DataFrame(means, columns=['mean time'], index=index)
     to_export.to_excel(f'other_files/D3_TIME_{filename}.xlsx')
-
-
-    # with xlsxwriter.Workbook(f'D3_auc_values_{filename}.xlsx') as workbook:  # generate file test.xlsx
-    #     worksheet = workbook.add_worksheet()
-    #     for row, data in enumerate(auc_values):
-    #         worksheet.write_row(row, 0, data)
-
 
     # D3 FILES
     with open('results/' + 'D3_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:
@@ -341,7 +331,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
 
         # SHAP
         start_time = time.time()
-        print('ST SHAP sto calcolando shap values')
+        print('ST Computing shap values')
         shap_values = explainer_shap.shap_values(test_set) # test set è una riga
         end_time_shap = (time.time() - start_time) / 60
         time_shap.append(end_time_shap)
@@ -349,7 +339,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
         zipped = list(zip(shap_values[1][0], all_cols))
         ordered_shap_list = sorted(zipped, key=lambda x: abs(x[0]), reverse=True)
         model_output = (explainer_shap.expected_value[1] + shap_values[1].sum()).round(4)  # è uguale a ML prediction
-        #print(f'ST model output {filename}', model_output)
 
         # Get the force plot for each row
         shap.initjs()
@@ -410,7 +399,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                 else:
                     swap.append((tt[2], False))
 
-                mean_sum = round((float(tt[0]) + float(tt[-1])) / 2, 3)  # caso in cui il valore di un feature è in un range di valori
+                mean_sum = round((float(tt[0]) + float(tt[-1])) / 2, 3)
                 variables.append((tt[2], mean_sum))
 
         lime_diz = {'batch %s' % k: {'row %s' % k: {
@@ -437,10 +426,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                                               coverage_samples=1000)
         end_time_a = time.time() - start_time_anch
         time_anchor.append(end_time_a)
-        #print('\n ALIBI EXPLANATION \n', exp_anchor)
 
         rules = exp_anchor.anchor
-        #print('RULE', rules)
         precision = exp_anchor.precision
         coverage = exp_anchor.coverage
 
@@ -453,8 +440,8 @@ def st_xai(data_for_xai, cols, all_cols, filename):
             else:
                 contrib.append('empty rule: all neighbors have the same label')  # al primo batch potrebbe essere vuoto
         else:
-            for s in rules:  # nel caso in cui ci siano più predicati
-                splittato = s.split(' ')  # splittato = [nswprice, >, 0.08], [0.3 <= feature <= 0.6]
+            for s in rules:
+                splittato = s.split(' ')
                 n = len(splittato)
 
                 if n == 3:  # 1 feature: caso tipo [feature <= 0.5]
@@ -463,8 +450,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                         swapped.append((splittato[0], True))
                     else:
                         swapped.append((splittato[0], False))
-                if n > 3:  # more than 1 feature: caso tipo rules = ['nswprice > 0.08', 'vicprice > 0.00', 'day <= 2.00']
-                                                         # splittato = [nswprice, >, 0.08]
+                if n > 3:
                     for el in splittato:
                         if el.isalpha() and el in cols:
                             contrib.append(el)
@@ -474,7 +460,7 @@ def st_xai(data_for_xai, cols, all_cols, filename):
                             contrib.append(el)
                             swapped.append((el, False))
 
-                        else:  # caso tipo: 0.3 <= feature <= 0.6
+                        else:
                             pos = 2
                             contrib.append(splittato[pos])
                             if splittato[pos] in cols:
@@ -510,12 +496,6 @@ def st_xai(data_for_xai, cols, all_cols, filename):
     means = [mean_time_shap,mean_time_lime,mean_time_anchor]
     to_export = pd.DataFrame(means, columns=['mean time'], index=index)
     to_export.to_excel(f'other_files/ST_TIME_{filename}.xlsx')
-
-    # with xlsxwriter.Workbook(f'ST_StudentError_{filename}.xlsx') as workbook:  # generate file test.xlsx
-    #     worksheet = workbook.add_worksheet()
-    #     for row, data in enumerate(student_error):
-    #         worksheet.write_row(row, 0, data)
-
 
     # ST FILES
     with open('results/' + 'ST_SHAP_%s.json' % filename, 'w', encoding='utf-8') as f:

@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
-from xgboost import XGBClassifier
 import sklearn.metrics as metrics
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -27,7 +26,6 @@ foldername="data/weather/"
 df_labels = pd.read_csv(foldername + "NEweather_class.csv", header=None)
 
 y = df_labels.values.flatten()  # numpy ndarray
-# y.columns = ['PRCP']
 
 df_data = pd.read_csv(foldername + "NEweather_data.csv", header=None)
 
@@ -80,8 +78,7 @@ def run_exps(X_train, y_train, X_test, y_test):
     models = [
               ('LogReg', LogisticRegression(solver = 'liblinear')),
               ('RF', RandomForestClassifier()),
-              ('SVM', make_pipeline(StandardScaler(), SVC())),
-              ('XGB', XGBClassifier(label_encoder = False))
+              ('SVM', make_pipeline(StandardScaler(), SVC()))
             ]
 
     results = []
@@ -92,8 +89,6 @@ def run_exps(X_train, y_train, X_test, y_test):
         print('-------',name)
 
         plot_roc(y_test, y_pred, classes, name)
-
-
 
         diz_res = {
             'model': name,
@@ -113,7 +108,6 @@ def run_exps(X_train, y_train, X_test, y_test):
         #     diz_res['feature_importance'] = feat_importances
 
         results.append(diz_res)
-    print(results)
     df = pd.DataFrame(results)
     df.to_excel('classificationTrials.xlsx')
     return results

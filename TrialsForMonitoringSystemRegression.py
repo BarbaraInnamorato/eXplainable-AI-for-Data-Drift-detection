@@ -61,17 +61,10 @@ def show_distribution(var_data):
 
 anas = pd.read_csv('data/panama.csv', encoding = 'utf-8')
 anas = anas.drop(columns='ts')
-print(anas.shape)
-print(anas.info())
-print(anas.describe())
-print(anas.head())
-print(anas.columns)
-
 
 # calculate the 0.01th percentile
 q01 = anas.target.quantile(0.01)
-col = anas[anas.target > q01]#['target']
-#print(col.shape)
+col = anas[anas.target > q01]
 show_distribution(col['target'])
 show_density(col['target'])
 
@@ -118,7 +111,6 @@ print(model, "\n")
 
 # Visualize the model tree
 tree = export_text(model)
-#print(tree)
 predictions = model.predict(X_test)
 mse = mean_squared_error(y_test, predictions)
 print("MSE:", mse)

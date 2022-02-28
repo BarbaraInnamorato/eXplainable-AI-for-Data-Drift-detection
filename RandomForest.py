@@ -1,21 +1,19 @@
 import warnings
 warnings.filterwarnings("ignore")
-
 import shap
-
 from sklearn import metrics
 from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, f1_score
 from sklearn.metrics import recall_score
-
 import numpy as np
 from numpyencoder import NumpyEncoder
 import time
 import json
 import matplotlib.pyplot as plt
 from collections import OrderedDict
+
 
 def plot_oob(to_export, all_cols, filename):
     print('PLOT OOB')
@@ -64,7 +62,6 @@ def plot_oob(to_export, all_cols, filename):
     importances = clf.feature_importances_
     ord_zip = list(zip(all_cols, importances))
     sort_ord_zip = sorted(ord_zip, key=lambda x:x[1], reverse=True)
-    #print('sort_ord_zip', sort_ord_zip)
     indices = np.argsort(importances)
 
     plt.figure()
@@ -76,7 +73,6 @@ def plot_oob(to_export, all_cols, filename):
     plt.savefig(f'images/RF Feature Importances {filename}')
 
     class_names = np.unique(to_export['y_train'])
-    #print('class_names', class_names)
 
     avg = ''
     if len(class_names) == 2:
@@ -101,7 +97,7 @@ def plot_oob(to_export, all_cols, filename):
                                      l1_reg=len(all_cols)
                                      )
 
-    print('RF explainer finito CLASSIFIC, ora shap values')
+    print('----Computing SHAP values')
     start_time = time.time()
     shap_values = explainer.shap_values(to_export['X_test_post'])
     tot_time = (time.time() - start_time) / 60
@@ -121,21 +117,6 @@ def plot_oob(to_export, all_cols, filename):
     print(class_rep_post_drift)
 
     fpr, tpr, thresholds = metrics.roc_curve(to_export['y_test_post'], pred_test_post, pos_label=2)
-
-    """
-    * *Precision*: Of the predictions the model made for this class, what proportion were correct? 
-    --> Of all the patients the model predicted are diabetic, how many are actually diabetic?
-    * *Recall*: Out of all of the instances of this class in the test dataset, how many did the model identify?
-    --> Of all the patients that are actually diabetic, how many did the model identify?
-    * *F1-Score*: An average metric that takes both precision and recall into account.
-    * *Support*: How many instances of this class are there in the test dataset?
-    
-    The classification report also includes averages for these metrics, including a weighted average that allows 
-    for the imbalance in the number of cases of each class.
-    
-    Note that the correct (true) predictions form a diagonal line from top left to bottom right - these figures should
-    be significantly higher than the false predictions if the model is any good.
-    """
 
     diz_rf_cl = {'oob_score': clf.oob_score_,
                  'Random Forest feature importance': sort_ord_zip,
@@ -162,7 +143,6 @@ def plot_oob(to_export, all_cols, filename):
     f2.close()
 
     return clf
-
 
 
 def plot_oob_regression(to_export, all_cols, filename):
@@ -240,7 +220,6 @@ def plot_oob_regression(to_export, all_cols, filename):
     print('explainer finito REGRESSION, ora shap values')
     start_time = time.time()
     shap_values = explainer.shap_values(to_export['X_test_post'])  # provo a usare un sample
-    #print('shap val RF regression \n', shap_values)
     end_time = (time.time() - start_time) / 60
 
     # Make shap plot
@@ -250,7 +229,6 @@ def plot_oob_regression(to_export, all_cols, filename):
     plt.tight_layout()
     plt.savefig('images/RF_regression_Summary_plot_%s' % filename)
 
-    # https://scikit-learn.org/stable/modules/model_evaluation.html#mean-tweedie-deviance # metrics explantion
     diz_rf = {
               "oob_score": clf.oob_score_,
               'Random Forest feature importance': sort_ord_zip,
@@ -284,7 +262,6 @@ def plot_oob_regression(to_export, all_cols, filename):
               'time': end_time
 
               }
-
 
     with open('other_files/RF_METRICS_REGRESSION_POST_%s.json' % filename, 'w', encoding='utf-8') as f1:
         json.dump(diz_rf, f1, cls=NumpyEncoder)

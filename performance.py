@@ -12,14 +12,11 @@ if not os.path.exists('performances'):
 
 def precision_k(predicted, actual, k):
     predicted_selected = predicted[:k]
-    #print('predicted_selected', predicted_selected, len(predicted_selected), 'k',k)
-    #print('set predicted_selected', set(predicted_selected), len(set(predicted_selected)))
     return len(set(predicted_selected) & set(actual)) / k
 
 
 def recall_k(predicted, actual, k):
     predicted_selected = predicted[:k]
-    print('predicted selected:', predicted_selected, len(predicted_selected))
     return len(set(predicted_selected) & set(actual)) / len(actual)
 
 
@@ -28,38 +25,7 @@ def get_actual(values):
     for k, r in values:
         if r:
             actual.append(k)
-    print('len actual', actual, len(actual))
     return actual
-"""
-- 'swapped': [  ['date', True], 
-                ['day', True], 
-                ['nswdemand', False], 
-                ['vicdemand', False], 
-                ['nswprice', True], 
-                ['vicprice', False], 
-                ['period', False],  
-                ['transfer', True]]
-la lista swapped è ordinata
-
-- ACTUAL ['nswdemand', 'vicdemand', 'period', 'date'] sono i true in swapped --> stesso ordine di swapped
-- SET ACTUAL {'vicdemand', 'nswdemand', 'period', 'date'} NOOOO
-
-ACTUAL CORRISPONDE A SWAPPED
-
-- predicted ['date', 'day', 'nswdemand', 'vicdemand', 'nswprice', 'vicprice', 'period', 'transfer'] 
-    --> stesso ordine di swapped
-    --> in ordine di importanza in base allo xai method
-    
-parto dal primo elemento in predicted, vedo se è in actual
-    se lo è --> 1
-    se non lo è --> 0
-considero il secondo predicted e vedo se è in actual 
---- a un certo punto potrei dire, ad esempio, 
-"considerando 3 predictor, in actual ce nè uno
-considerando 4 predictor, in actual ce ne sono 2
-ecc... 
-
-"""
 
 
 def read_files():
@@ -70,15 +36,12 @@ def read_files():
     for index, js in enumerate(folder):
         with open(os.path.join(path_to_json, js)) as json_file:
             data_dict_o = json.load(json_file)
-            #print('***data_dict_o', data_dict_o)
-            #print('****data_dict_o[1]', data_dict_o[1])
 
             result_name = "performance_%s" % js
             print('-------------name', result_name)
             columns = list(data_dict_o[1].values())[0]
             n = len(columns)
             k_range = list(range(1, n))
-
 
             data_dict = dict()
             i = 0
@@ -87,8 +50,6 @@ def read_files():
                     for r in b.values():                    # {'class_names': [0, 1] ecc...
                         data_dict[i] = r
                         i += 1
-
-            #print('data dict', data_dict)
             data = {}
             for key, v in data_dict.items():
                 if 'Anchor_prediction' in v.keys() and v['swapped'] != []:
@@ -101,8 +62,6 @@ def read_files():
                     print('WARNING: one list between predicted and actual is empty')
                     continue
                 else:
-                    #print('predicted', predicted)
-                    #print('actual', actual)
                     resulting_dict = {'predicted': predicted, 'actual': actual}
                     for k in k_range:
                         resulting_dict[f"P@{k}"] = precision_k(predicted, actual, k)
@@ -114,7 +73,6 @@ def read_files():
                     performance_df = data_df.groupby('result').agg(['mean', 'std']).T
                     performance_df.to_excel(f'performances/{result_name[:-5]}.xlsx')
 
-
                     # PLOT
                     p_low = []
                     p_high = []
@@ -125,7 +83,6 @@ def read_files():
                         p_value.append(m)
                         p_low.append(max(0, m-s))
                         p_high.append(min(1, m+s))
-
 
                     p_low = np.array(p_low)
                     p_high = np.array(p_high)
@@ -140,7 +97,6 @@ def read_files():
                         r_value.append(m)
                         r_low.append(max(0, m-s))
                         r_high.append(min(1, m+s))
-
 
                     r_low = np.array(r_low)
                     r_high = np.array(r_high)
@@ -170,7 +126,7 @@ def read_files():
                     plt.savefig(r'performances/ %s.png'%result_name[:-5])
                     plt.close()
 
-                    # chiudere il file
+                    # close files
                     json_file.close()
                     plt.close('all')
 
