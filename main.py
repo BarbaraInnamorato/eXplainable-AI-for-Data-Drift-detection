@@ -10,7 +10,7 @@ from d3.D3 import *
 
 # XAI techniques
 import XAI
-import st_anas
+import st_traffic
 import SP_LIME
 
 # Monitoring system
@@ -23,7 +23,7 @@ import os
 import Perm_importance
 
 # Performance computation
-import performance
+import Prec_Rec_k
 
 # Create directories
 if not os.path.exists('results'):
@@ -77,7 +77,7 @@ def faicose_un_dataset(dataset_name):
     for s in streams:
         bar.next()
         if 'student-teacher' in models:
-            print(' - Fitting ST')
+            print(f' - Fitting ST {dataset_name}')
             train_results.append(teacher_student_train(teacher, student, s, fit=True))
         else:
             print(' -Fitting %s' % (models[0]))
@@ -127,7 +127,7 @@ def faicose_un_dataset(dataset_name):
         anas_st = anas_results['student-teacher'][0]
         anas_d3 = anas_results['d3'][0]
         XAI.d3_xai(anas_d3, cols_to_print, all_cols, dataset_name)
-        st_anas.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
+        st_traffic.st_xai(anas_st, cols_to_print, all_cols, dataset_name)
         SP_LIME.sp_lime(anas_d3, all_cols, dataset_name)
     else:
         st = inf_results['student-teacher'][0]
@@ -167,26 +167,26 @@ def execute_main():
 
     print("Starting 'execute_main'")
     # creating processes
-    p1 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
-    p2 = mp.Process(target=faicose_un_dataset, args=('electricity',))
+    #p1 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
+    #p2 = mp.Process(target=faicose_un_dataset, args=('electricity',))
     p3 = mp.Process(target=faicose_un_dataset, args=('weather',))
     p4 = mp.Process(target=faicose_un_dataset, args=('anas',))
 
     # starting processes
-    print(p1.start())
-    print(p2.start())
+    #print(p1.start())
+    #print(p2.start())
     print(p3.start())
     print(p4.start())
 
     # process IDs
-    print("ID of process p1: {}".format(p1.pid))
-    print("ID of process p2: {}".format(p2.pid))
+    #print("ID of process p1: {}".format(p1.pid))
+    #print("ID of process p2: {}".format(p2.pid))
     print("ID of process p3: {}".format(p3.pid))
     print("ID of process p4: {}".format(p4.pid))
 
     # wait until processes are finished
-    p1.join()
-    p2.join()
+    #p1.join()
+    #p2.join()
     p3.join()
     p4.join()
 
@@ -194,13 +194,13 @@ def execute_main():
     print("All processes finished execution!")
 
     # check if processes are alive
-    print("Process p1 is alive: {}".format(p1.is_alive()))
-    print("Process p2 is alive: {}".format(p2.is_alive()))
+    #print("Process p1 is alive: {}".format(p1.is_alive()))
+    #print("Process p2 is alive: {}".format(p2.is_alive()))
     print("Process p3 is alive: {}".format(p3.is_alive()))
     print("Process p4 is alive: {}".format(p4.is_alive()))
 
     # Performances Computation (outside the for: takes files from results folder)
-    performance.read_files()
+    #performance.read_files()
 
     print(f"Total time: {(time.time() - start_time) / 60} minutes")
     print('---')

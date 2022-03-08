@@ -192,8 +192,6 @@ def plot_oob_regression(to_export, all_cols, filename):
     importances = clf.feature_importances_
     ord_zip = list(zip(all_cols, importances))
     sort_ord_zip = sorted(ord_zip, key=lambda x: x[1])
-    print('sort_ord_zip', sort_ord_zip)
-    print('importances', importances.argsort())
     indices = np.argsort(importances)
 
     plt.figure()

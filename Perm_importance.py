@@ -10,8 +10,10 @@ def compute_pfi(rfc, to_export, all_cols, filename):
 
     perm_importance = permutation_importance(rfc, to_export['X_test_post'], to_export['y_test_post'], n_repeats=10, random_state=42, n_jobs=2)
     perm_zip = list(zip(all_cols, perm_importance['importances_mean']))
-    perm_sorted = sorted(perm_zip, key=lambda x: x[1], reverse=True)
-    print('perm imp 2 (held out) ', perm_sorted)
+    #perm_sorted = sorted(perm_zip, key=lambda x: x[1], reverse=True)
+    perm_sorted = sorted(perm_zip, key=lambda x: abs(x[1]), reverse=True)
+
+    print(f'perm imp 2 (held out) {filename} ', perm_sorted)
     plt.figure()
     x_val = [t[0] for t in perm_sorted]
     y_val = [t[1] for t in perm_sorted]
