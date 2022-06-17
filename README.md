@@ -48,3 +48,6 @@ Execution order
 11 - **TrialsForMonitoringSystem (Classification and Regression)** : run just one time on Elec2, Weather, ForestCover data sets (original) \
     **TrialsForMonitoringSystem (Classification and Regression)** : run just one time on Traffic data sets (original)
     python3 main.py
+    
+    
+     pyhton main.py
