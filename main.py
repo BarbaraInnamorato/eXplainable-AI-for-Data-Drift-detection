@@ -167,26 +167,26 @@ def execute_main():
 
     print("Starting 'execute_main'")
     # creating processes
-    #p1 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
-    #p2 = mp.Process(target=faicose_un_dataset, args=('electricity',))
+    # p1 = mp.Process(target=faicose_un_dataset, args=('forestcover',))
+    # p2 = mp.Process(target=faicose_un_dataset, args=('electricity',))
     p3 = mp.Process(target=faicose_un_dataset, args=('weather',))
     p4 = mp.Process(target=faicose_un_dataset, args=('anas',))
 
     # starting processes
-    #print(p1.start())
-    #print(p2.start())
+    # print(p1.start())
+    # print(p2.start())
     print(p3.start())
     print(p4.start())
 
     # process IDs
-    #print("ID of process p1: {}".format(p1.pid))
-    #print("ID of process p2: {}".format(p2.pid))
+    # print("ID of process p1: {}".format(p1.pid))
+    # print("ID of process p2: {}".format(p2.pid))
     print("ID of process p3: {}".format(p3.pid))
     print("ID of process p4: {}".format(p4.pid))
 
     # wait until processes are finished
-    #p1.join()
-    #p2.join()
+    # p1.join()
+    # p2.join()
     p3.join()
     p4.join()
 
@@ -194,13 +194,13 @@ def execute_main():
     print("All processes finished execution!")
 
     # check if processes are alive
-    #print("Process p1 is alive: {}".format(p1.is_alive()))
-    #print("Process p2 is alive: {}".format(p2.is_alive()))
+    # print("Process p1 is alive: {}".format(p1.is_alive()))
+    # print("Process p2 is alive: {}".format(p2.is_alive()))
     print("Process p3 is alive: {}".format(p3.is_alive()))
     print("Process p4 is alive: {}".format(p4.is_alive()))
 
     # Performances Computation (outside the for: takes files from results folder)
-    #performance.read_files()
+    # performance.read_files()
 
     print(f"Total time: {(time.time() - start_time) / 60} minutes")
     print('---')
